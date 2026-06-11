@@ -115,7 +115,20 @@
 
     <div class="card">
       <h2>Nuevo fardo</h2>
-      <div class="grid2">
+
+      <!-- DISPLAY BALANZA -->
+      <div style="background:#0f0f0f;border-radius:12px;padding:24px 16px;margin-bottom:16px;text-align:center;border:1px solid #2a2a2a;position:relative;">
+        <div style="font-size:11px;letter-spacing:0.12em;color:#555;margin-bottom:8px;">PESO EN BALANZA</div>
+        <div style="display:flex;align-items:baseline;justify-content:center;gap:10px;">
+          <span id="peso-display" style="font-size:88px;font-weight:700;color:#1D9E75;line-height:1;font-variant-numeric:tabular-nums;font-family:monospace;">—</span>
+          <span style="font-size:28px;color:#555;font-weight:500;">kg</span>
+        </div>
+        <input type="number" id="peso" style="position:absolute;opacity:0;pointer-events:none;" min="1" max="9999"/>
+        <button onclick="leerBalanza()" style="margin-top:16px;background:#1a1a1a;border:1px solid #2a2a2a;color:#888;border-radius:8px;padding:8px 20px;font-size:13px;cursor:pointer;transition:all 0.15s;" onmouseover="this.style.borderColor='#555';this.style.color='#fff'" onmouseout="this.style.borderColor='#2a2a2a';this.style.color='#888'">⟳ Leer balanza</button>
+      </div>
+
+      <!-- CAMPOS -->
+      <div class="grid2" style="margin-bottom:12px;">
         <div><label>Bodega</label>
           <select id="bodega">
             <option>Renca</option><option>Maipú</option>
@@ -130,7 +143,7 @@
           </select>
         </div>
       </div>
-      <div class="grid2">
+      <div class="grid2" style="margin-bottom:12px;">
         <div><label>Operador</label>
           <input type="text" id="operador" placeholder="Nombre operador"/>
         </div>
@@ -141,12 +154,6 @@
             <option value="MANUAL">Manual</option>
           </select>
         </div>
-      </div>
-      <div class="row">
-        <div><label>Peso (kg)</label>
-          <input type="number" id="peso" placeholder="Ej: 342" min="1" max="9999"/>
-        </div>
-        <button class="btn-secondary" onclick="leerBalanza()">⟳ Leer balanza</button>
       </div>
       <div class="turno-info">🕐 Turno detectado: <strong id="turno-display">—</strong></div>
       <button class="btn-primary" id="btn-registrar" onclick="registrarFardo()">
@@ -402,11 +409,15 @@ async function leerBalanza() {
     const d = await r.json();
     if (d.weight) {
       document.getElementById('peso').value = d.weight;
+      document.getElementById('peso-display').textContent = d.weight;
+      document.getElementById('peso-display').style.color = '#1D9E75';
       msg('msg-pesaje', '✓ Peso leído: ' + d.weight + ' kg' + (d.mode==='simulado'?' (simulado)':''), 'ok');
     }
   } catch {
     const p = Math.floor(Math.random()*800)+100;
     document.getElementById('peso').value = p;
+    document.getElementById('peso-display').textContent = p;
+    document.getElementById('peso-display').style.color = '#555';
     msg('msg-pesaje', 'Flask offline — peso demo: ' + p + ' kg', 'info');
   }
 }
@@ -456,6 +467,8 @@ async function registrarFardo() {
     }
 
     document.getElementById('peso').value = '';
+    document.getElementById('peso-display').textContent = '—';
+    document.getElementById('peso-display').style.color = '#1D9E75';
     await cargarStats();
     await cargarPesajes();
 
