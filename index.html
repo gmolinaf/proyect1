@@ -429,43 +429,72 @@ async function registrarFardo() {
   const operador = document.getElementById('operador').value.trim();
   const maquina = document.getElementById('maquina').value;
   const turnoVal = turno();
-  const btn = document.getElementById('btn-registrar');
 
   if (!peso||peso<=0) { msg('msg-pesaje','Ingresa un peso válido','error'); return; }
   if (!operador) { msg('msg-pesaje','Ingresa el nombre del operador','error'); return; }
 
-  const f = folio(bodega, material);
-  btn.disabled = true; btn.textContent = 'Registrando...';
-  msg('msg-pesaje', 'Guardando en Supabase...', 'info');
+  // Guardar datos del fardo pendiente para poder reintentar
+  fardoPendiente = { folio: folio(bodega, material), peso, material, bodega, operador, maquina, turnoVal };
+  await procesarImpresionYRegistro();
+}
+
+// Variable global del fardo en proceso (para reintentos)
+let fardoPendiente = null;
+
+async function procesarImpresionYRegistro() {
+  if (!fardoPendiente) return;
+  const { folio: f, peso, material, bodega, operador, maquina, turnoVal } = fardoPendiente;
+  const btn = document.getElementById('btn-registrar');
+
+  // Ocultar botón de reintento si estaba visible
+  const btnReintentar = document.getElementById('btn-reintentar');
+  if (btnReintentar) btnReintentar.style.display = 'none';
+
+  btn.disabled = true;
+  btn.textContent = 'Imprimiendo etiqueta...';
+  msg('msg-pesaje', '🖨️ Imprimiendo etiqueta... no registra hasta confirmar impresión', 'info');
+
+  // ── PASO 1: IMPRIMIR PRIMERO ──
+  let resultImpresion;
+  try {
+    const r = await fetch(FLASK + '/print_label', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ folio: f, peso, material_code: material })
+    });
+    resultImpresion = await r.json();
+  } catch (e) {
+    // Flask no responde (offline o caído)
+    mostrarErrorImpresion('No se pudo conectar con la impresora (Flask offline). El fardo NO fue registrado.');
+    return;
+  }
+
+  // Si la impresión falló, NO registrar
+  if (!resultImpresion.success) {
+    mostrarErrorImpresion('La etiqueta no se imprimió: ' + (resultImpresion.message || 'error desconocido') + '. El fardo NO fue registrado.');
+    return;
+  }
+
+  // ── PASO 2: IMPRESIÓN OK → recién registrar en Supabase ──
+  btn.textContent = 'Registrando...';
+  msg('msg-pesaje', '✓ Etiqueta impresa. Registrando en sistema...', 'info');
 
   try {
-    // 1 — Guardar en Supabase
     await sb('/rest/v1/pesaje_data', {
       method: 'POST',
-      body: JSON.stringify({ folio:f, peso, material_code:material, bodega, operador, maquina, turno:turnoVal })
+      body: JSON.stringify({
+        folio: f, peso, material_code: material, bodega, operador, maquina, turno: turnoVal,
+        qr_url: resultImpresion.qr_url || null
+      })
     });
 
-    msg('msg-pesaje', 'Generando QR...', 'info');
-
-    // 2 — Llamar Flask para generar QR y guardar en Storage
-    try {
-      const r = await fetch(FLASK + '/print_label', {
-        method: 'POST',
-        headers: {'Content-Type':'application/json'},
-        body: JSON.stringify({ folio:f, peso, material_code:material })
-      });
-      const result = await r.json();
-
-      if (result.success && result.qr_url) {
-        msg('msg-pesaje', '✓ Fardo registrado y QR generado: ' + f, 'ok');
-        mostrarModal(result, operador, turnoVal, material);
-      } else {
-        msg('msg-pesaje', '✓ Fardo registrado. Sin QR (Flask offline)', 'ok');
-      }
-    } catch {
-      msg('msg-pesaje', '✓ Fardo registrado. Flask offline — QR no generado', 'info');
+    msg('msg-pesaje', '✓ Fardo registrado e impreso: ' + f, 'ok');
+    if (resultImpresion.qr_url) {
+      mostrarModal(resultImpresion, operador, turnoVal, material);
     }
 
+    // Limpiar
+    fardoPendiente = null;
     document.getElementById('peso').value = '';
     document.getElementById('peso-display').textContent = '—';
     document.getElementById('peso-display').style.color = '#1D9E75';
@@ -473,11 +502,33 @@ async function registrarFardo() {
     await cargarPesajes();
 
   } catch(e) {
-    msg('msg-pesaje', 'Error: ' + e.message, 'error');
+    // Imprimió pero falló el registro — caso raro pero posible
+    mostrarErrorImpresion('La etiqueta se imprimió pero falló el registro: ' + e.message + '. Puedes reintentar el registro.');
   } finally {
     btn.disabled = false;
     btn.textContent = '+ Registrar fardo e imprimir etiqueta';
   }
+}
+
+function mostrarErrorImpresion(texto) {
+  const btn = document.getElementById('btn-registrar');
+  btn.disabled = false;
+  btn.textContent = '+ Registrar fardo e imprimir etiqueta';
+  msg('msg-pesaje', '✗ ' + texto, 'error');
+
+  // Mostrar botón de reintentar
+  let btnReintentar = document.getElementById('btn-reintentar');
+  if (!btnReintentar) {
+    btnReintentar = document.createElement('button');
+    btnReintentar.id = 'btn-reintentar';
+    btnReintentar.className = 'btn-primary';
+    btnReintentar.style.marginTop = '8px';
+    btnReintentar.style.background = '#F59E0B';
+    btnReintentar.textContent = '🔄 Reintentar impresión';
+    btnReintentar.onclick = procesarImpresionYRegistro;
+    document.getElementById('msg-pesaje').after(btnReintentar);
+  }
+  btnReintentar.style.display = 'block';
 }
 
 async function registrarDespacho() {
