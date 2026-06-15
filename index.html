@@ -407,11 +407,20 @@ async function leerBalanza() {
   try {
     const r = await fetch(FLASK + '/weight_data');
     const d = await r.json();
-    if (d.weight) {
+    // Mostrar el peso aunque sea 0 o negativo (antes 'if(d.weight)' ocultaba el 0)
+    if (d.weight !== undefined && d.weight !== null) {
       document.getElementById('peso').value = d.weight;
       document.getElementById('peso-display').textContent = d.weight;
-      document.getElementById('peso-display').style.color = '#1D9E75';
-      msg('msg-pesaje', '✓ Peso leído: ' + d.weight + ' kg' + (d.mode==='simulado'?' (simulado)':''), 'ok');
+      // Verde si estable, naranjo si inestable (oscilando)
+      const estable = d.estable !== false;
+      document.getElementById('peso-display').style.color = estable ? '#1D9E75' : '#F59E0B';
+      const estadoTxt = estable ? '' : ' (inestable, espera que se estabilice)';
+      msg('msg-pesaje', '✓ Peso: ' + d.weight + ' kg' + (d.mode==='simulado'?' (simulado)':'') + estadoTxt, estable ? 'ok' : 'info');
+    } else if (d.error) {
+      msg('msg-pesaje', '✗ Error balanza: ' + d.error, 'error');
+    } else if (d.raw) {
+      // No se pudo parsear pero hay datos crudos
+      msg('msg-pesaje', 'Lectura sin formato: ' + d.raw, 'info');
     }
   } catch {
     const p = Math.floor(Math.random()*800)+100;
