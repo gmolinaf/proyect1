@@ -99,8 +99,9 @@
 
 <nav>
   <button class="active" onclick="showSection('pesaje', this)">Pesaje</button>
-  <button onclick="showSection('despacho', this)">Despacho</button>
-  <button onclick="showSection('historial', this)">Historial</button>
+  <button onclick="showSection('historial', this)">Historial Producción</button>
+  <button onclick="showSection('programar', this)">📅 Programar Despacho</button>
+  <button onclick="showSection('contingencia', this)">🚚 Despacho Contingencia</button>
   <button onclick="showSection('admin', this)">⚙️ Admin</button>
 </nav>
 
@@ -134,7 +135,11 @@
           <span style="font-size:28px;color:#555;font-weight:500;">kg</span>
         </div>
         <input type="number" id="peso" style="position:absolute;opacity:0;pointer-events:none;" min="1" max="9999"/>
-        <button onclick="leerBalanza()" style="margin-top:16px;background:#1a1a1a;border:1px solid #2a2a2a;color:#888;border-radius:8px;padding:8px 20px;font-size:13px;cursor:pointer;transition:all 0.15s;" onmouseover="this.style.borderColor='#555';this.style.color='#fff'" onmouseout="this.style.borderColor='#2a2a2a';this.style.color='#888'">⟳ Leer balanza</button>
+        <div style="margin-top:16px;display:flex;gap:8px;justify-content:center;align-items:center;">
+          <button onclick="leerBalanza()" style="background:#1a1a1a;border:1px solid #2a2a2a;color:#888;border-radius:8px;padding:8px 20px;font-size:13px;cursor:pointer;transition:all 0.15s;" onmouseover="this.style.borderColor='#555';this.style.color='#fff'" onmouseout="this.style.borderColor='#2a2a2a';this.style.color='#888'">⟳ Leer balanza</button>
+          <button onclick="pesoManual()" title="Peso manual (requiere clave)" style="background:none;border:none;color:#333;font-size:11px;cursor:pointer;padding:4px;" onmouseover="this.style.color='#888'" onmouseout="this.style.color='#333'">✎ manual</button>
+        </div>
+        <div id="manual-activo" style="display:none;font-size:11px;color:#F59E0B;margin-top:6px;">Modo peso manual activo</div>
       </div>
 
       <!-- CAMPOS -->
@@ -229,51 +234,124 @@
   </div>
 
   <!-- DESPACHO -->
-  <div class="section" id="sec-despacho">
+  <!-- PROGRAMAR DESPACHO -->
+  <div class="section" id="sec-programar">
     <div class="card">
-      <h2>Nuevo despacho</h2>
+      <h2>📅 Programar despacho</h2>
+      <p style="color:#888;font-size:13px;margin-top:-4px;">Registra despachos futuros. Todos los campos son opcionales por ahora.</p>
       <div class="grid3">
+        <div><label>Fecha programada</label>
+          <input type="date" id="dp-fecha"/>
+        </div>
         <div><label>Origen</label>
-          <select id="d-origen">
+          <select id="dp-origen">
+            <option value="">— Seleccionar —</option>
             <option>Renca</option><option>Maipú</option>
             <option>La Pintana</option><option>Talcahuano</option>
           </select>
         </div>
         <div><label>Destino</label>
-          <select id="d-destino">
+          <select id="dp-destino">
+            <option value="">— Seleccionar —</option>
             <option>Cliente final</option><option>Renca</option>
-            <option>Maipú</option><option>La Pintana</option><option>Talcahuano</option>
+            <option>Maipú</option><option>La Pintana</option><option>Talcahuano</option><option>Exportación</option>
           </select>
         </div>
+      </div>
+      <div class="grid3">
         <div><label>Tipo</label>
-          <select id="d-tipo">
+          <select id="dp-tipo">
+            <option value="">— Seleccionar —</option>
             <option>Nacional</option><option>Internacional</option><option>Entre bodegas</option>
           </select>
         </div>
-      </div>
-      <div class="grid2">
-        <div><label>Operador</label>
-          <input type="text" id="d-operador" placeholder="Nombre operador"/>
+        <div><label>Material</label>
+          <select id="dp-material"><option value="">— Seleccionar —</option></select>
         </div>
+        <div><label>Cantidad estimada (kg)</label>
+          <input type="number" id="dp-cantidad" placeholder="Ej: 5000" min="0"/>
+        </div>
+      </div>
+      <div class="grid3">
         <div><label>Transportista</label>
-          <input type="text" id="d-transportista" placeholder="Empresa o nombre"/>
+          <input type="text" id="dp-transportista" placeholder="Empresa o nombre"/>
         </div>
-      </div>
-      <div class="grid2">
-        <div><label>Patente camión</label>
-          <input type="text" id="d-patente" placeholder="Ej: ABCD12"/>
+        <div><label>Patente</label>
+          <input type="text" id="dp-patente" placeholder="Ej: ABCD12"/>
         </div>
-        <div><label>Peso neto confirmado (kg)</label>
-          <input type="number" id="d-peso" placeholder="Peso real al salir" min="1"/>
+        <div><label>Operador</label>
+          <input type="text" id="dp-operador" placeholder="Responsable"/>
         </div>
       </div>
       <div style="margin-bottom:12px;">
         <label>Observaciones</label>
-        <textarea id="d-obs" placeholder="Notas, diferencias de peso, incidencias..."></textarea>
+        <textarea id="dp-obs" placeholder="Notas del despacho programado..."></textarea>
       </div>
-      <button class="btn-primary" id="btn-despacho" onclick="registrarDespacho()">+ Registrar despacho</button>
-      <div class="msg" id="msg-despacho"></div>
+      <button class="btn-primary" onclick="programarDespacho()">+ Programar despacho</button>
+      <div class="msg" id="msg-programado"></div>
     </div>
+
+    <div class="card">
+      <h2>Despachos programados</h2>
+      <div id="lista-programados"><div class="empty">Cargando...</div></div>
+    </div>
+  </div>
+
+  <!-- DESPACHO CONTINGENCIA -->
+  <div class="section" id="sec-contingencia">
+    <div class="card">
+      <h2>🚚 Despacho Contingencia</h2>
+      <p style="color:#888;font-size:13px;margin-top:-4px;">Respaldo para cuando falla el celular. Agrega los fardos por número de folio; el peso y material se traen solos.</p>
+      <div class="grid3">
+        <div><label>Origen</label>
+          <select id="c-origen">
+            <option>Renca</option><option>Maipú</option>
+            <option>La Pintana</option><option>Talcahuano</option>
+          </select>
+        </div>
+        <div><label>Destino</label>
+          <select id="c-destino">
+            <option>Cliente final</option><option>Renca</option>
+            <option>Maipú</option><option>La Pintana</option><option>Talcahuano</option><option>Exportación</option>
+          </select>
+        </div>
+        <div><label>Tipo</label>
+          <select id="c-tipo">
+            <option>Nacional</option><option>Internacional</option><option>Entre bodegas</option>
+          </select>
+        </div>
+      </div>
+      <div class="grid3">
+        <div><label>Encargado</label>
+          <input type="text" id="c-operador" placeholder="Responsable del despacho"/>
+        </div>
+        <div><label>Transportista</label>
+          <input type="text" id="c-transportista" placeholder="Empresa o nombre"/>
+        </div>
+        <div><label>Patente camión</label>
+          <input type="text" id="c-patente" placeholder="Ej: ABCD12"/>
+        </div>
+      </div>
+      <div style="margin-bottom:12px;">
+        <label>Observaciones</label>
+        <textarea id="c-obs" placeholder="Notas, incidencias..."></textarea>
+      </div>
+
+      <!-- Agregar fardos por folio -->
+      <div style="border-top:1px solid #eee;padding-top:16px;margin-top:8px;">
+        <label>Agregar fardo por folio</label>
+        <div style="display:flex;gap:8px;margin-bottom:12px;">
+          <input type="text" id="c-folio-input" inputmode="numeric" placeholder="Número del folio (ej: 24)" style="flex:1;" onkeydown="if(event.key==='Enter')agregarFolioContingencia()"/>
+          <button class="btn-primary" style="width:auto;white-space:nowrap;" onclick="agregarFolioContingencia()">+ Agregar</button>
+        </div>
+        <div id="c-lista-fardos"><div class="empty">Sin fardos agregados</div></div>
+        <div id="c-resumen" style="display:none;text-align:right;font-weight:600;margin-top:8px;padding:8px;background:#f5f5f0;border-radius:8px;"></div>
+      </div>
+
+      <button class="btn-primary" id="btn-contingencia" onclick="registrarContingencia()" style="margin-top:16px;">✓ Registrar despacho contingencia</button>
+      <div class="msg" id="msg-contingencia"></div>
+    </div>
+
     <div class="card">
       <h2>Últimos despachos</h2>
       <div id="lista-despachos"><div class="empty">Cargando...</div></div>
@@ -387,22 +465,24 @@ function msg(id, txt, tipo) {
   const el = document.getElementById(id);
   el.textContent = txt; el.className = 'msg ' + tipo;
 }
-let adminDesbloqueado = false;
+let zonaProtegidaDesbloqueada = false;
 function showSection(id, btn) {
-  // La pestaña Admin requiere clave (solo la primera vez por sesión)
-  if (id === 'admin' && !adminDesbloqueado) {
+  // Pestañas protegidas (de la 3 en adelante): programar, contingencia, admin
+  const protegidas = ['programar', 'contingencia', 'admin'];
+  if (protegidas.includes(id) && !zonaProtegidaDesbloqueada) {
     const clave = prompt('Ingresa la clave de administración:');
     if (clave !== 'metalumrenca') {
       if (clave !== null) alert('Clave incorrecta');
       return; // no cambia de pestaña
     }
-    adminDesbloqueado = true;
+    zonaProtegidaDesbloqueada = true;
   }
   document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
   document.querySelectorAll('nav button').forEach(b => b.classList.remove('active'));
   document.getElementById('sec-' + id).classList.add('active');
   btn.classList.add('active');
-  if (id === 'despacho') cargarDespachos();
+  if (id === 'programar') cargarProgramados();
+  if (id === 'contingencia') cargarDespachos();
   if (id === 'historial') setFechasDefault();
   if (id === 'admin') cargarAdmin();
 }
@@ -446,6 +526,8 @@ function limpiarCamposPesaje() {
   document.getElementById('peso').value = '';
   document.getElementById('peso-display').textContent = '—';
   document.getElementById('peso-display').style.color = '#1D9E75';
+  const ma = document.getElementById('manual-activo');
+  if (ma) ma.style.display = 'none';
   // Bodega siempre vuelve a Renca
   const bod = document.getElementById('bodega');
   if (bod) bod.value = 'Renca';
@@ -459,7 +541,7 @@ function limpiarCamposPesaje() {
 async function cargarStats() {
   try {
     const hoy = new Date().toISOString().split('T')[0];
-    const data = await sb(`/rest/v1/pesaje_data?timestamp=gte.${hoy}T00:00:00&select=peso,folio,timestamp&order=id.desc`);
+    const data = await sb(`/rest/v1/pesaje_data?timestamp=gte.${hoy}T00:00:00&anulado=neq.true&select=peso,folio,timestamp&order=id.desc`);
     document.getElementById('s-fardos').textContent = data.length;
     document.getElementById('s-kilos').textContent = data.reduce((a,r)=>a+Number(r.peso||0),0).toLocaleString()+' kg';
     document.getElementById('s-turno').textContent = turno();
@@ -476,7 +558,7 @@ async function cargarStats() {
 
 async function cargarPesajes() {
   try {
-    const data = await sb('/rest/v1/pesaje_data?select=folio,peso,material_code,bodega,operador,maquina,turno,timestamp,qr_url&order=id.desc&limit=10');
+    const data = await sb('/rest/v1/pesaje_data?select=id,folio,peso,material_code,bodega,operador,maquina,turno,timestamp,qr_url,anulado&order=id.desc&limit=10');
     const el = document.getElementById('lista-pesaje');
     if (!data.length) { el.innerHTML='<div class="empty">Sin registros aún</div>'; return; }
     el.innerHTML = data.map(r => {
@@ -487,26 +569,79 @@ async function cargarPesajes() {
       const qrThumb = r.qr_url
         ? `<img src="${r.qr_url}" class="qr-thumb" onclick="verQR('${r.qr_url}')" title="Ver QR"/>`
         : `<span style="font-size:11px;color:#ccc;">Sin QR</span>`;
-      // Botón para descargar la ficha completa (escapar comillas en los valores)
       const esc = s => (s||'').toString().replace(/'/g, "\\'");
       const btnFicha = `<button onclick="descargarFicha('${esc(r.folio)}','${esc(r.peso)}','${esc(r.material_code)}','${esc(r.operador)}','${esc(r.turno)}','${esc(r.bodega)}','${esc(r.qr_url)}')" title="Descargar ficha" style="background:none;border:1px solid #d0d0c8;border-radius:6px;padding:4px 8px;cursor:pointer;font-size:14px;">⬇️</button>`;
-      return `<div class="registro-row">
+      const anulado = r.anulado === true;
+      // Botón anular (solo si no está ya anulado)
+      const btnAnular = anulado
+        ? `<span style="font-size:11px;color:#DC2626;font-weight:600;border:1px solid #DC2626;border-radius:6px;padding:3px 8px;">ANULADO</span>`
+        : `<button onclick="anularFardo(${r.id}, '${esc(r.folio)}')" title="Anular fardo" style="background:none;border:1px solid #e0a0a0;color:#c44;border-radius:6px;padding:4px 8px;cursor:pointer;font-size:14px;">🚫</button>`;
+      const estiloAnulado = anulado ? 'opacity:0.5;text-decoration:line-through;' : '';
+      return `<div class="registro-row" style="${estiloAnulado}">
         <div class="registro-icon">📦</div>
         <div class="registro-info">
           <div class="folio">${r.folio}</div>
           <div class="meta">${r.bodega||'—'} · ${r.material_code||'—'} · ${r.operador||'—'} · ${r.maquina||'—'} <span class="badge badge-${tc}">${r.turno||'—'}</span></div>
         </div>
-        <div class="registro-right" style="display:flex;align-items:center;gap:10px;">
+        <div class="registro-right" style="display:flex;align-items:center;gap:8px;">
           <div>
             <div class="peso">${r.peso} kg</div>
             <div class="hora">${fecha} ${hora}</div>
           </div>
           ${qrThumb}
           ${btnFicha}
+          ${btnAnular}
         </div>
       </div>`;
     }).join('');
   } catch { document.getElementById('lista-pesaje').innerHTML='<div class="empty">Error cargando</div>'; }
+}
+
+// Peso manual (con clave) - para cuando la balanza falla pero la impresora funciona.
+// Flask sigue online, la impresión es REAL, solo el peso se escribe a mano.
+function pesoManual() {
+  const clave = prompt('✎ Peso manual\n\nUsar solo si la balanza falló. La etiqueta se imprimirá normalmente.\n\nIngresa la clave de administración:');
+  if (clave !== 'metalumrenca') {
+    if (clave) alert('Clave incorrecta');
+    return;
+  }
+  const pesoStr = prompt('Ingresa el peso en kg (solo números):');
+  if (pesoStr === null) return;
+  const peso = parseInt(pesoStr);
+  if (isNaN(peso) || peso <= 0) {
+    alert('Peso inválido. Debe ser un número mayor que 0.');
+    return;
+  }
+  document.getElementById('peso').value = peso;
+  document.getElementById('peso-display').textContent = peso;
+  document.getElementById('peso-display').style.color = '#F59E0B';
+  document.getElementById('manual-activo').style.display = 'block';
+  msg('msg-pesaje', '✎ Peso manual: ' + peso + ' kg. Verifica los demás campos y registra.', 'info');
+}
+
+// Anular un fardo (con clave). Marca anulado=true, conserva el rastro.
+async function anularFardo(id, folio) {
+  const clave = prompt('⚠️ Anular el fardo ' + folio + '\n\nEsto lo marcará como anulado (no contará para stock ni producción, pero quedará el registro).\n\nIngresa la clave de administración:');
+  if (clave !== 'metalumrenca') {
+    if (clave) alert('Clave incorrecta');
+    return;
+  }
+  const motivo = prompt('Motivo de la anulación (opcional):') || '';
+  try {
+    await sb('/rest/v1/pesaje_data?id=eq.' + id, {
+      method: 'PATCH',
+      body: JSON.stringify({
+        anulado: true,
+        motivo_anulacion: motivo,
+        fecha_anulacion: new Date().toISOString()
+      })
+    });
+    mostrarAvisoExito('✓ Fardo anulado\n\nFolio: ' + folio);
+    await cargarStats();
+    await cargarPesajes();
+  } catch (e) {
+    alert('Error anulando el fardo: ' + e.message);
+  }
 }
 
 function verQR(url) {
@@ -826,36 +961,198 @@ function mostrarErrorImpresion(texto) {
   btnReintentar.style.display = 'block';
 }
 
-async function registrarDespacho() {
-  const origen = document.getElementById('d-origen').value;
-  const destino = document.getElementById('d-destino').value;
-  const tipo = document.getElementById('d-tipo').value;
-  const operador = document.getElementById('d-operador').value.trim();
-  const transportista = document.getElementById('d-transportista').value.trim();
-  const patente = document.getElementById('d-patente').value.trim().toUpperCase();
-  const peso = parseInt(document.getElementById('d-peso').value);
-  const obs = document.getElementById('d-obs').value.trim();
-  const btn = document.getElementById('btn-despacho');
+// ===== DESPACHO CONTINGENCIA (por folio) =====
+let fardosContingencia = [];  // {folio, peso, material_code, id, despachado}
 
-  if (!operador) { msg('msg-despacho','Ingresa el operador','error'); return; }
-  if (!peso||peso<=0) { msg('msg-despacho','Ingresa el peso neto','error'); return; }
+async function agregarFolioContingencia() {
+  const input = document.getElementById('c-folio-input');
+  let numero = input.value.trim();
+  if (!numero) { msg('msg-contingencia', 'Escribe el número del folio', 'error'); return; }
+  // Solo dígitos
+  if (!/^\d+$/.test(numero)) { msg('msg-contingencia', 'Ingresa solo el número del folio (ej: 24)', 'error'); return; }
+  // Rellenar con ceros hasta 5 dígitos (24 -> 00024)
+  const numPad = numero.padStart(5, '0');
 
-  btn.disabled=true; btn.textContent='Registrando...';
-  msg('msg-despacho','Guardando...','info');
+  const origen = document.getElementById('c-origen').value;
 
   try {
-    await sb('/rest/v1/despachos', {
-      method:'POST',
-      body: JSON.stringify({origen,destino,tipo_despacho:tipo,operador,transportista,patente,peso_neto_confirmado:peso,observaciones:obs})
-    });
-    msg('msg-despacho','✓ Despacho registrado correctamente','ok');
-    ['d-operador','d-transportista','d-patente','d-peso','d-obs'].forEach(id=>document.getElementById(id).value='');
+    // Buscar por el número (patrón *-00024-*), como hace el Android.
+    // Los números son únicos globalmente, así que identifica el fardo exacto.
+    const data = await sb('/rest/v1/pesaje_data?folio=like.*-' + numPad + '-*&select=id,folio,peso,material_code,bodega,despachado,anulado');
+    if (!data.length) {
+      msg('msg-contingencia', '❌ No existe fardo con número ' + numero, 'error');
+      return;
+    }
+    const f = data[0];
+
+    // Verificar duplicado en la lista (por folio real)
+    if (fardosContingencia.find(x => x.folio === f.folio)) {
+      msg('msg-contingencia', 'Ese fardo ya está en la lista', 'error');
+      return;
+    }
+    if (f.anulado === true) { msg('msg-contingencia', '⚠️ Ese fardo está anulado', 'error'); return; }
+    if (f.despachado === true) { msg('msg-contingencia', '⚠️ Ese fardo ya fue despachado', 'error'); return; }
+    if (f.bodega !== origen) { msg('msg-contingencia', '⚠️ El fardo es de ' + f.bodega + ', no de ' + origen, 'error'); return; }
+
+    fardosContingencia.push(f);
+    input.value = '';
+    msg('msg-contingencia', '', '');
+    renderFardosContingencia();
+  } catch(e) {
+    msg('msg-contingencia', 'Error: ' + e.message, 'error');
+  }
+}
+
+function renderFardosContingencia() {
+  const cont = document.getElementById('c-lista-fardos');
+  const resumen = document.getElementById('c-resumen');
+  if (!fardosContingencia.length) {
+    cont.innerHTML = '<div class="empty">Sin fardos agregados</div>';
+    resumen.style.display = 'none';
+    return;
+  }
+  cont.innerHTML = fardosContingencia.map((f, i) =>
+    `<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 12px;border-bottom:1px solid #eee;">
+      <div>
+        <strong>${f.folio}</strong>
+        <span style="color:#888;font-size:13px;margin-left:8px;">${MAT_NOM_LOCAL[f.material_code] || f.material_code}</span>
+      </div>
+      <div style="display:flex;align-items:center;gap:12px;">
+        <span style="font-weight:600;">${Number(f.peso).toLocaleString()} kg</span>
+        <button onclick="quitarFolioContingencia(${i})" style="background:none;border:1px solid #e0a0a0;color:#c44;border-radius:6px;padding:3px 10px;cursor:pointer;font-size:12px;">Quitar</button>
+      </div>
+    </div>`).join('');
+  const totalKg = fardosContingencia.reduce((a,f)=>a+Number(f.peso||0),0);
+  resumen.style.display = 'block';
+  resumen.textContent = `${fardosContingencia.length} fardos · ${totalKg.toLocaleString()} kg total`;
+}
+
+function quitarFolioContingencia(i) {
+  fardosContingencia.splice(i, 1);
+  renderFardosContingencia();
+}
+
+async function registrarContingencia() {
+  if (!fardosContingencia.length) { msg('msg-contingencia', 'Agrega al menos un fardo', 'error'); return; }
+
+  const origen = document.getElementById('c-origen').value;
+  const destino = document.getElementById('c-destino').value;
+  const tipo = document.getElementById('c-tipo').value;
+  const operador = document.getElementById('c-operador').value.trim();
+  const transportista = document.getElementById('c-transportista').value.trim();
+  const patente = document.getElementById('c-patente').value.trim().toUpperCase();
+  const obs = document.getElementById('c-obs').value.trim();
+  const btn = document.getElementById('btn-contingencia');
+
+  if (!operador) { msg('msg-contingencia', 'Ingresa el encargado', 'error'); return; }
+
+  btn.disabled = true; btn.textContent = 'Registrando...';
+
+  try {
+    // 1) Crear una fila en despachos por cada fardo (igual que el Android)
+    //    con origen_despacho = 'web_contingencia'
+    const filas = fardosContingencia.map(f => ({
+      folio: f.folio,
+      peso: f.peso,
+      material_code: f.material_code,
+      origen, destino, tipo_despacho: tipo,
+      operador, transportista, patente,
+      peso_neto_confirmado: f.peso,
+      observaciones: obs,
+      origen_despacho: 'web_contingencia'
+    }));
+    await sb('/rest/v1/despachos', { method:'POST', body: JSON.stringify(filas) });
+
+    // 2) Marcar cada fardo como despachado en pesaje_data
+    for (const f of fardosContingencia) {
+      await sb('/rest/v1/pesaje_data?id=eq.' + f.id, {
+        method:'PATCH', body: JSON.stringify({ despachado: true })
+      });
+    }
+
+    mostrarAvisoExito('✓ Despacho contingencia registrado\n\n' + fardosContingencia.length + ' fardos despachados');
+    // Limpiar
+    fardosContingencia = [];
+    renderFardosContingencia();
+    ['c-operador','c-transportista','c-patente','c-obs'].forEach(id=>document.getElementById(id).value='');
+    msg('msg-contingencia', '', '');
     await cargarDespachos();
   } catch(e) {
-    msg('msg-despacho','Error: '+e.message,'error');
+    msg('msg-contingencia', 'Error: ' + e.message, 'error');
   } finally {
-    btn.disabled=false; btn.textContent='+ Registrar despacho';
+    btn.disabled = false; btn.textContent = '✓ Registrar despacho contingencia';
   }
+}
+
+// ===== DESPACHOS PROGRAMADOS =====
+async function programarDespacho() {
+  // Todos los campos opcionales. Se arma solo con lo que tenga valor.
+  const obj = {
+    fecha_programada: document.getElementById('dp-fecha').value || null,
+    origen: document.getElementById('dp-origen').value || null,
+    destino: document.getElementById('dp-destino').value || null,
+    tipo_despacho: document.getElementById('dp-tipo').value || null,
+    material_code: document.getElementById('dp-material').value || null,
+    cantidad_estimada: document.getElementById('dp-cantidad').value ? Number(document.getElementById('dp-cantidad').value) : null,
+    transportista: document.getElementById('dp-transportista').value.trim() || null,
+    patente: document.getElementById('dp-patente').value.trim().toUpperCase() || null,
+    operador: document.getElementById('dp-operador').value.trim() || null,
+    observaciones: document.getElementById('dp-obs').value.trim() || null,
+    estado: 'programado'
+  };
+
+  // Validación mínima: al menos algún campo con dato
+  const tieneAlgo = Object.entries(obj).some(([k,v]) => k !== 'estado' && v !== null);
+  if (!tieneAlgo) { msg('msg-programado', 'Completa al menos un campo', 'error'); return; }
+
+  try {
+    await sb('/rest/v1/despachos_programados', { method:'POST', body: JSON.stringify(obj) });
+    msg('msg-programado', '✓ Despacho programado guardado', 'ok');
+    // Limpiar campos
+    ['dp-fecha','dp-cantidad','dp-transportista','dp-patente','dp-operador','dp-obs'].forEach(id=>document.getElementById(id).value='');
+    ['dp-origen','dp-destino','dp-tipo','dp-material'].forEach(id=>document.getElementById(id).value='');
+    cargarProgramados();
+  } catch(e) {
+    msg('msg-programado', 'Error: ' + e.message, 'error');
+  }
+}
+
+async function cargarProgramados() {
+  const el = document.getElementById('lista-programados');
+  try {
+    const data = await sb('/rest/v1/despachos_programados?select=*&estado=eq.programado&order=fecha_programada.asc');
+    if (!data.length) { el.innerHTML = '<div class="empty">Sin despachos programados</div>'; return; }
+    el.innerHTML = data.map(r => {
+      const fecha = r.fecha_programada ? new Date(r.fecha_programada + 'T00:00:00').toLocaleDateString('es-CL',{day:'2-digit',month:'2-digit',year:'2-digit'}) : 'Sin fecha';
+      const matNombre = r.material_code ? (MAT_NOM_LOCAL[r.material_code] || r.material_code) : '—';
+      const cant = r.cantidad_estimada ? Number(r.cantidad_estimada).toLocaleString() + ' kg' : '—';
+      const esc = s => (s||'').toString().replace(/'/g,"\\'");
+      return `<div class="registro-row">
+        <div class="registro-icon">📅</div>
+        <div class="registro-info">
+          <div class="folio">${(r.origen||'—')} → ${(r.destino||'—')}</div>
+          <div class="meta">${fecha} · ${matNombre} · ${(r.tipo_despacho||'—')} · ${(r.transportista||'—')} ${(r.patente?'· '+r.patente:'')}</div>
+        </div>
+        <div class="registro-right" style="display:flex;align-items:center;gap:8px;">
+          <div>
+            <div class="peso">${cant}</div>
+            <div class="hora">programado</div>
+          </div>
+          <button onclick="eliminarProgramado(${r.id})" title="Eliminar" style="background:none;border:1px solid #e0a0a0;color:#c44;border-radius:6px;padding:4px 8px;cursor:pointer;font-size:14px;">🗑️</button>
+        </div>
+      </div>`;
+    }).join('');
+  } catch(e) {
+    el.innerHTML = '<div class="empty">Error: ' + e.message + '</div>';
+  }
+}
+
+async function eliminarProgramado(id) {
+  if (!confirm('¿Eliminar este despacho programado?')) return;
+  try {
+    await sb('/rest/v1/despachos_programados?id=eq.' + id, { method:'DELETE' });
+    cargarProgramados();
+  } catch(e) { alert('Error: ' + e.message); }
 }
 
 async function cargarDespachos() {
@@ -939,6 +1236,8 @@ setInterval(checkFlask, 30000);
 // =========================================================
 // CARGA DINÁMICA DE DROPDOWNS desde Supabase
 // =========================================================
+// Mapa local code->nombre de material (para mostrar en programados)
+let MAT_NOM_LOCAL = {};
 async function cargarDropdownsDinamicos() {
   try {
     const operadores = await sb('/rest/v1/operadores?activo=eq.true&order=nombre.asc&select=nombre');
@@ -951,6 +1250,15 @@ async function cargarDropdownsDinamicos() {
     const selMat = document.getElementById('material');
     if (selMat && materiales.length) {
       selMat.innerHTML = '<option value="">— Seleccionar material —</option>' + materiales.map(m => `<option value="${m.code}">${m.nombre} (${m.code})</option>`).join('');
+    }
+    // Llenar también el dropdown de material de despachos programados y el mapa local
+    if (materiales.length) {
+      MAT_NOM_LOCAL = {};
+      materiales.forEach(m => { MAT_NOM_LOCAL[m.code] = m.nombre; });
+      const selMatDp = document.getElementById('dp-material');
+      if (selMatDp) {
+        selMatDp.innerHTML = '<option value="">— Seleccionar —</option>' + materiales.map(m => `<option value="${m.code}">${m.nombre} (${m.code})</option>`).join('');
+      }
     }
 
     const maquinas = await sb('/rest/v1/maquinas?activo=eq.true&order=nombre.asc&select=code,nombre');
