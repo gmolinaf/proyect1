@@ -79,6 +79,7 @@
 
   @media (max-width: 600px) { .grid2, .grid3 { grid-template-columns: 1fr; } }
 </style>
+<script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.js"></script>
 </head>
 <body>
 
@@ -100,6 +101,7 @@
   <button class="active" onclick="showSection('pesaje', this)">Pesaje</button>
   <button onclick="showSection('despacho', this)">Despacho</button>
   <button onclick="showSection('historial', this)">Historial</button>
+  <button onclick="showSection('admin', this)">⚙️ Admin</button>
 </nav>
 
 <main>
@@ -115,6 +117,14 @@
 
     <div class="card">
       <h2>Nuevo fardo</h2>
+
+      <!-- BANNER AVISO USB (oculto por defecto) -->
+      <div id="banner-usb" style="display:none;background:#FEE2E2;border:3px solid #DC2626;border-radius:12px;padding:24px;margin-bottom:16px;text-align:center;">
+        <div style="font-size:40px;margin-bottom:8px;">⚠️</div>
+        <div id="banner-usb-titulo" style="font-size:24px;font-weight:700;color:#991B1B;margin-bottom:12px;">Error en USB</div>
+        <div id="banner-usb-texto" style="font-size:16px;color:#7F1D1D;line-height:1.6;"></div>
+        <button onclick="document.getElementById('banner-usb').style.display='none'" style="margin-top:16px;background:#DC2626;border:none;color:#fff;border-radius:8px;padding:10px 24px;font-size:14px;font-weight:600;cursor:pointer;">Entendido</button>
+      </div>
 
       <!-- DISPLAY BALANZA -->
       <div style="background:#0f0f0f;border-radius:12px;padding:24px 16px;margin-bottom:16px;text-align:center;border:1px solid #2a2a2a;position:relative;">
@@ -137,21 +147,71 @@
         </div>
         <div><label>Material</label>
           <select id="material">
-            <option value="CU">Cobre (CU)</option><option value="AL">Aluminio (AL)</option>
-            <option value="FE">Fierro (FE)</option><option value="PP">Plástico (PP)</option>
-            <option value="PA">Papel (PA)</option>
+            <option value="TEN">TENSE (TEN)</option>
+            <option value="UBC">UBC (UBC)</option>
+            <option value="INX304">AC INOX 304 (INX304)</option>
+            <option value="PFB">PERFIL B (PFB)</option>
+            <option value="TTCA">TT COLOR A (TTCA)</option>
+            <option value="OFF">OFFSET (OFF)</option>
+            <option value="TAB">T. TABOR (TAB)</option>
+            <option value="PPN">P. PINTADO (PPN)</option>
+            <option value="RAD">RADIADOR (RAD)</option>
+            <option value="FLC">FOIL COLOR (FLC)</option>
+            <option value="FLB">FOIL BCO. (FLB)</option>
+            <option value="PFA">PERFIL A (PFA)</option>
+            <option value="INX316">AC INOX 316 (INX316)</option>
+            <option value="PAN">P. ANODIZADO (PAN)</option>
+            <option value="TTCB">TT COLOR B (TTCB)</option>
+            <option value="VIG">VIGAS (VIG)</option>
+            <option value="PFC">PERFIL C (PFC)</option>
+            <option value="CAB">CABLE (CAB)</option>
+            <option value="CABGR">CABLE C/GR (CABGR)</option>
+            <option value="CABNG">CABLE NG C/A (CABNG)</option>
+            <option value="CABZ">CABLE C/Z (CABZ)</option>
+            <option value="RADM">RAD. MIXTO (RADM)</option>
+            <option value="AER">AEROSOL/POM (AER)</option>
+            <option value="BOB">BOBINAS (BOB)</option>
+            <option value="LLA">LLANTAS (LLA)</option>
+            <option value="INXNI">AC INOX NI (INXNI)</option>
+            <option value="CPX">COMPLEX (CPX)</option>
+            <option value="CPXN">COMPLEX NES (CPXN)</option>
           </select>
         </div>
       </div>
       <div class="grid2" style="margin-bottom:12px;">
         <div><label>Operador</label>
-          <input type="text" id="operador" placeholder="Nombre operador"/>
+          <select id="operador">
+            <option value="Arredondo Maldonado, Cristian">Arredondo Maldonado, Cristian</option>
+            <option value="Arteaga Vasquez, Elmer">Arteaga Vasquez, Elmer</option>
+            <option value="Astreide, Joel">Astreide, Joel</option>
+            <option value="Beauliere, Jean Louis">Beauliere, Jean Louis</option>
+            <option value="Beris, Odelet">Beris, Odelet</option>
+            <option value="Cifuentes Pedraza, Jose M.">Cifuentes Pedraza, Jose M.</option>
+            <option value="Delian, Fenel">Delian, Fenel</option>
+            <option value="Doirin, Baudler">Doirin, Baudler</option>
+            <option value="Etienne, Claudin">Etienne, Claudin</option>
+            <option value="Flerimon, Jean Fernand">Flerimon, Jean Fernand</option>
+            <option value="Florestal, Darilus">Florestal, Darilus</option>
+            <option value="Gallardo Chandía, María José">Gallardo Chandía, María José</option>
+            <option value="Georges, Ednor">Georges, Ednor</option>
+            <option value="Guzman Perez, Marco">Guzman Perez, Marco</option>
+            <option value="Hernandez Vergara, Sady">Hernandez Vergara, Sady</option>
+            <option value="Jean-Baptiste, Enick">Jean-Baptiste, Enick</option>
+            <option value="Munoz Aguayo, Fabian">Munoz Aguayo, Fabian</option>
+            <option value="Parada Villar, Miguel">Parada Villar, Miguel</option>
+            <option value="Stivens, Frantz">Stivens, Frantz</option>
+            <option value="Verdugo Vallejos, Elizardo">Verdugo Vallejos, Elizardo</option>
+          </select>
         </div>
         <div><label>Máquina</label>
           <select id="maquina">
-            <option value="PRENSA-1">Prensa 1</option><option value="PRENSA-2">Prensa 2</option>
-            <option value="PRENSA-3">Prensa 3</option><option value="TRITURADORA-1">Trituradora 1</option>
-            <option value="MANUAL">Manual</option>
+            <option value="EVI">EVI</option>
+            <option value="EVII">EVII</option>
+            <option value="EVIII">EVIII</option>
+            <option value="BRIQ-1-2">Briqueteadoras 1 y 2</option>
+            <option value="BRIQ-CHINA">Briqueteadora CHINA</option>
+            <option value="CANDENSOR">Candensor</option>
+            <option value="CHATARRERA">Chatarrera</option>
           </select>
         </div>
       </div>
@@ -242,26 +302,57 @@
     </div>
   </div>
 
+  <!-- ADMIN -->
+  <div class="section" id="sec-admin">
+    <div class="card">
+      <h2>⚙️ Administración de catálogos</h2>
+      <p style="color:#888;font-size:13px;margin-top:-4px;">Agrega o quita operadores, materiales y máquinas. Los cambios se reflejan automáticamente en los dropdowns.</p>
+    </div>
+
+    <!-- OPERADORES -->
+    <div class="card">
+      <h2>Operadores</h2>
+      <div style="display:flex;gap:8px;margin-bottom:12px;">
+        <input type="text" id="adm-op-nombre" placeholder="Nombre del operador (ej: Pérez González, Juan)"/>
+        <button class="btn-primary" style="width:auto;white-space:nowrap;" onclick="agregarOperador()">+ Agregar</button>
+      </div>
+      <div id="adm-lista-operadores"><div class="empty">Cargando...</div></div>
+    </div>
+
+    <!-- MATERIALES -->
+    <div class="card">
+      <h2>Materiales</h2>
+      <p style="color:#888;font-size:12px;margin-top:-4px;">El <strong>código</strong> va impreso en la etiqueta. El <strong>nombre</strong> se ve en los dashboards.</p>
+      <div style="display:flex;gap:8px;margin-bottom:12px;">
+        <input type="text" id="adm-mat-code" placeholder="Código (ej: CU)" style="max-width:140px;"/>
+        <input type="text" id="adm-mat-nombre" placeholder="Nombre completo (ej: Cobre)"/>
+        <button class="btn-primary" style="width:auto;white-space:nowrap;" onclick="agregarMaterial()">+ Agregar</button>
+      </div>
+      <div id="adm-lista-materiales"><div class="empty">Cargando...</div></div>
+    </div>
+
+    <!-- MAQUINAS -->
+    <div class="card">
+      <h2>Máquinas</h2>
+      <p style="color:#888;font-size:12px;margin-top:-4px;">El <strong>código</strong> se guarda internamente. El <strong>nombre</strong> se ve en pantalla.</p>
+      <div style="display:flex;gap:8px;margin-bottom:12px;">
+        <input type="text" id="adm-maq-code" placeholder="Código (ej: EVI)" style="max-width:140px;"/>
+        <input type="text" id="adm-maq-nombre" placeholder="Nombre (ej: EVI)"/>
+        <button class="btn-primary" style="width:auto;white-space:nowrap;" onclick="agregarMaquina()">+ Agregar</button>
+      </div>
+      <div id="adm-lista-maquinas"><div class="empty">Cargando...</div></div>
+    </div>
+  </div>
+
 </main>
 
 <!-- MODAL ETIQUETA QR -->
-<div class="modal-overlay" id="modal-qr">
-  <div class="modal">
-    <h3>Etiqueta digital generada</h3>
-    <p class="sub">Escanea este QR desde la app Android para despacho</p>
-    <img id="modal-qr-img" src="" alt="QR del fardo"/>
-    <div class="etiqueta-datos">
-      <p>Folio: <strong id="modal-folio">—</strong></p>
-      <p>Peso: <strong id="modal-peso">—</strong> kg</p>
-      <p>Material: <strong id="modal-material">—</strong></p>
-      <p>Operador: <strong id="modal-operador">—</strong></p>
-      <p>Turno: <strong id="modal-turno">—</strong></p>
-    </div>
-    <div class="modal-btns">
-      <button class="btn-secondary" onclick="cerrarModal()">Cerrar</button>
-      <a id="modal-qr-link" href="" target="_blank" style="flex:1;">
-        <button class="btn-primary" style="width:100%;">Ver QR completo</button>
-      </a>
+<div class="modal-overlay" id="modal-aviso">
+  <div class="modal" style="text-align:center;max-width:380px;">
+    <div id="modal-aviso-icono" style="font-size:48px;margin-bottom:8px;">✓</div>
+    <h3 id="modal-aviso-titulo" style="white-space:pre-line;">Bulto registrado e impreso</h3>
+    <div class="modal-btns" style="margin-top:20px;">
+      <button class="btn-primary" style="width:100%;" onclick="cerrarAviso()">Aceptar</button>
     </div>
   </div>
 </div>
@@ -296,13 +387,24 @@ function msg(id, txt, tipo) {
   const el = document.getElementById(id);
   el.textContent = txt; el.className = 'msg ' + tipo;
 }
+let adminDesbloqueado = false;
 function showSection(id, btn) {
+  // La pestaña Admin requiere clave (solo la primera vez por sesión)
+  if (id === 'admin' && !adminDesbloqueado) {
+    const clave = prompt('Ingresa la clave de administración:');
+    if (clave !== 'metalumrenca') {
+      if (clave !== null) alert('Clave incorrecta');
+      return; // no cambia de pestaña
+    }
+    adminDesbloqueado = true;
+  }
   document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
   document.querySelectorAll('nav button').forEach(b => b.classList.remove('active'));
   document.getElementById('sec-' + id).classList.add('active');
   btn.classList.add('active');
   if (id === 'despacho') cargarDespachos();
   if (id === 'historial') setFechasDefault();
+  if (id === 'admin') cargarAdmin();
 }
 async function sb(path, opts) {
   const r = await fetch(URL_SB + path, { headers: H, ...opts });
@@ -327,31 +429,42 @@ async function checkFlask() {
 }
 
 // Modal QR
-function mostrarModal(data, operadorVal, turnoVal, materialVal) {
-  document.getElementById('modal-qr-img').src = data.qr_url;
-  document.getElementById('modal-folio').textContent = data.folio;
-  document.getElementById('modal-peso').textContent = data.peso;
-  document.getElementById('modal-material').textContent = materialVal;
-  document.getElementById('modal-operador').textContent = operadorVal;
-  document.getElementById('modal-turno').textContent = turnoVal;
-  document.getElementById('modal-qr-link').href = data.qr_url;
-  document.getElementById('modal-qr').classList.add('show');
+function mostrarAvisoExito(texto) {
+  document.getElementById('modal-aviso-titulo').textContent = texto;
+  document.getElementById('modal-aviso-icono').textContent = '✓';
+  document.getElementById('modal-aviso').classList.add('show');
 }
-function cerrarModal() {
-  document.getElementById('modal-qr').classList.remove('show');
+function cerrarAviso() {
+  document.getElementById('modal-aviso').classList.remove('show');
 }
-document.getElementById('modal-qr').addEventListener('click', function(e) {
-  if (e.target === this) cerrarModal();
+document.getElementById('modal-aviso').addEventListener('click', function(e) {
+  if (e.target === this) cerrarAviso();
 });
+
+// Limpiar todos los campos de pesaje (deja bodega en Renca, resto en blanco)
+function limpiarCamposPesaje() {
+  document.getElementById('peso').value = '';
+  document.getElementById('peso-display').textContent = '—';
+  document.getElementById('peso-display').style.color = '#1D9E75';
+  // Bodega siempre vuelve a Renca
+  const bod = document.getElementById('bodega');
+  if (bod) bod.value = 'Renca';
+  // Material, operador y máquina vuelven a la opción vacía (— Seleccionar —)
+  ['material','operador','maquina'].forEach(id=>{
+    const el = document.getElementById(id);
+    if (el) el.value = '';
+  });
+}
 
 async function cargarStats() {
   try {
     const hoy = new Date().toISOString().split('T')[0];
-    const data = await sb(`/rest/v1/pesaje_data?timestamp=gte.${hoy}T00:00:00&select=peso,folio`);
+    const data = await sb(`/rest/v1/pesaje_data?timestamp=gte.${hoy}T00:00:00&select=peso,folio,timestamp&order=id.desc`);
     document.getElementById('s-fardos').textContent = data.length;
-    document.getElementById('s-kilos').textContent = data.reduce((a,r)=>a+(r.peso||0),0).toLocaleString()+' kg';
+    document.getElementById('s-kilos').textContent = data.reduce((a,r)=>a+Number(r.peso||0),0).toLocaleString()+' kg';
     document.getElementById('s-turno').textContent = turno();
-    document.getElementById('s-folio').textContent = data.length ? data[data.length-1].folio : '—';
+    // data viene ordenado desc, el primero es el último registrado
+    document.getElementById('s-folio').textContent = data.length ? data[0].folio : '—';
     document.getElementById('turno-display').textContent = turnoFull();
     document.getElementById('dot').className = 'dot ok';
     document.getElementById('conn-label').textContent = 'Supabase OK';
@@ -363,7 +476,7 @@ async function cargarStats() {
 
 async function cargarPesajes() {
   try {
-    const data = await sb('/rest/v1/pesaje_data?select=folio,peso,material_code,bodega,operador,maquina,turno,timestamp,qr_url&order=timestamp.desc&limit=10');
+    const data = await sb('/rest/v1/pesaje_data?select=folio,peso,material_code,bodega,operador,maquina,turno,timestamp,qr_url&order=id.desc&limit=10');
     const el = document.getElementById('lista-pesaje');
     if (!data.length) { el.innerHTML='<div class="empty">Sin registros aún</div>'; return; }
     el.innerHTML = data.map(r => {
@@ -374,6 +487,9 @@ async function cargarPesajes() {
       const qrThumb = r.qr_url
         ? `<img src="${r.qr_url}" class="qr-thumb" onclick="verQR('${r.qr_url}')" title="Ver QR"/>`
         : `<span style="font-size:11px;color:#ccc;">Sin QR</span>`;
+      // Botón para descargar la ficha completa (escapar comillas en los valores)
+      const esc = s => (s||'').toString().replace(/'/g, "\\'");
+      const btnFicha = `<button onclick="descargarFicha('${esc(r.folio)}','${esc(r.peso)}','${esc(r.material_code)}','${esc(r.operador)}','${esc(r.turno)}','${esc(r.bodega)}','${esc(r.qr_url)}')" title="Descargar ficha" style="background:none;border:1px solid #d0d0c8;border-radius:6px;padding:4px 8px;cursor:pointer;font-size:14px;">⬇️</button>`;
       return `<div class="registro-row">
         <div class="registro-icon">📦</div>
         <div class="registro-info">
@@ -386,6 +502,7 @@ async function cargarPesajes() {
             <div class="hora">${fecha} ${hora}</div>
           </div>
           ${qrThumb}
+          ${btnFicha}
         </div>
       </div>`;
     }).join('');
@@ -393,14 +510,92 @@ async function cargarPesajes() {
 }
 
 function verQR(url) {
-  document.getElementById('modal-qr-img').src = url;
-  document.getElementById('modal-folio').textContent = '—';
-  document.getElementById('modal-peso').textContent = '—';
-  document.getElementById('modal-material').textContent = '—';
-  document.getElementById('modal-operador').textContent = '—';
-  document.getElementById('modal-turno').textContent = '—';
-  document.getElementById('modal-qr-link').href = url;
-  document.getElementById('modal-qr').classList.add('show');
+  // Abrir el QR en una pestaña nueva (ya no hay modal)
+  window.open(url, '_blank');
+}
+
+// Genera y descarga una ficha completa (QR + datos) como imagen PNG
+async function descargarFicha(folio, peso, material, operador, turno, bodega, qrUrl) {
+  try {
+    const W = 600, H = 760;
+    const canvas = document.createElement('canvas');
+    canvas.width = W; canvas.height = H;
+    const ctx = canvas.getContext('2d');
+
+    // Fondo blanco
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, W, H);
+
+    // Marco
+    ctx.strokeStyle = '#1D9E75';
+    ctx.lineWidth = 4;
+    ctx.strokeRect(12, 12, W-24, H-24);
+
+    // Título
+    ctx.fillStyle = '#1a1a1a';
+    ctx.font = 'bold 30px Arial';
+    ctx.textAlign = 'center';
+    ctx.fillText('METALUM', W/2, 60);
+    ctx.font = '15px Arial';
+    ctx.fillStyle = '#888';
+    ctx.fillText('Ficha de bulto', W/2, 85);
+
+    // QR (cargar desde la URL si existe, o generar)
+    let qrCanvas;
+    if (qrUrl) {
+      // Cargar la imagen del QR ya subida
+      const img = new Image();
+      img.crossOrigin = 'anonymous';
+      await new Promise((resolve, reject) => {
+        img.onload = resolve;
+        img.onerror = reject;
+        img.src = qrUrl;
+      });
+      ctx.drawImage(img, W/2 - 130, 110, 260, 260);
+    } else {
+      // Generar el QR al vuelo
+      const qr = qrcode(0, 'M');
+      qr.addData(folio + ',' + peso);
+      qr.make();
+      const count = qr.getModuleCount();
+      const cell = Math.floor(240 / count);
+      const qrSize = cell * count;
+      const offX = W/2 - qrSize/2, offY = 120;
+      ctx.fillStyle = '#000000';
+      for (let row = 0; row < count; row++)
+        for (let col = 0; col < count; col++)
+          if (qr.isDark(row, col))
+            ctx.fillRect(offX + col*cell, offY + row*cell, cell, cell);
+    }
+
+    // Datos abajo
+    ctx.textAlign = 'left';
+    ctx.fillStyle = '#1a1a1a';
+    const x = 70; let y = 420;
+    const linea = (label, valor) => {
+      ctx.font = 'bold 18px Arial';
+      ctx.fillStyle = '#666';
+      ctx.fillText(label, x, y);
+      ctx.font = '22px Arial';
+      ctx.fillStyle = '#1a1a1a';
+      ctx.fillText(valor || '—', x + 160, y);
+      y += 48;
+    };
+    linea('Folio:', folio);
+    linea('Peso:', peso + ' kg');
+    linea('Material:', material);
+    linea('Operador:', operador);
+    linea('Bodega:', bodega);
+    linea('Turno:', turno);
+
+    // Descargar
+    const enlace = document.createElement('a');
+    enlace.download = 'ficha_' + folio + '.png';
+    enlace.href = canvas.toDataURL('image/png');
+    enlace.click();
+  } catch (e) {
+    alert('No se pudo generar la ficha: ' + e.message);
+  }
 }
 
 async function leerBalanza() {
@@ -418,16 +613,83 @@ async function leerBalanza() {
       msg('msg-pesaje', '✓ Peso: ' + d.weight + ' kg' + (d.mode==='simulado'?' (simulado)':'') + estadoTxt, estable ? 'ok' : 'info');
     } else if (d.error) {
       msg('msg-pesaje', '✗ Error balanza: ' + d.error, 'error');
+      mostrarAvisoUSB('balanza');
     } else if (d.raw) {
       // No se pudo parsear pero hay datos crudos
       msg('msg-pesaje', 'Lectura sin formato: ' + d.raw, 'info');
     }
   } catch {
+    // Flask offline: el peso demo requiere clave admin SIEMPRE (cada vez)
+    const clave = prompt('⚠️ No hay conexión con la balanza (Flask offline).\n\nPara leer un peso simulado en MODO DEMO, ingresa la clave de administración.\n\nDejar vacío para cancelar:');
+    if (clave !== 'metalumrenca') {
+      if (clave) alert('Clave incorrecta');
+      msg('msg-pesaje', 'Sin conexión con la balanza (Flask offline)', 'error');
+      return;
+    }
     const p = Math.floor(Math.random()*800)+100;
     document.getElementById('peso').value = p;
     document.getElementById('peso-display').textContent = p;
     document.getElementById('peso-display').style.color = '#555';
-    msg('msg-pesaje', 'Flask offline — peso demo: ' + p + ' kg', 'info');
+    msg('msg-pesaje', 'MODO DEMO — peso simulado: ' + p + ' kg', 'info');
+  }
+}
+
+// Genera un QR en el navegador y lo sube a Supabase Storage (modo demo).
+// Replica el QR del Flask: contenido "folio,peso", negro sobre blanco.
+async function generarYSubirQR(folio, peso) {
+  try {
+    const contenido = folio + ',' + peso;
+
+    // Generar QR con qrcode-generator (typeNumber 0 = auto, correctLevel M)
+    const qr = qrcode(0, 'M');
+    qr.addData(contenido);
+    qr.make();
+
+    // Dibujar en canvas: negro sobre blanco, con borde (quiet zone)
+    const count = qr.getModuleCount();
+    const cellSize = 8;      // px por módulo (como box_size=8 del Flask)
+    const margin = 4 * cellSize;  // border=4 del Flask
+    const size = count * cellSize + margin * 2;
+
+    const canvas = document.createElement('canvas');
+    canvas.width = size;
+    canvas.height = size;
+    const ctx = canvas.getContext('2d');
+
+    // Fondo blanco
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, size, size);
+
+    // Módulos negros
+    ctx.fillStyle = '#000000';
+    for (let row = 0; row < count; row++) {
+      for (let col = 0; col < count; col++) {
+        if (qr.isDark(row, col)) {
+          ctx.fillRect(margin + col * cellSize, margin + row * cellSize, cellSize, cellSize);
+        }
+      }
+    }
+
+    // Convertir a blob PNG
+    const blob = await new Promise(res => canvas.toBlob(res, 'image/png'));
+    if (!blob) return null;
+
+    // Subir a Supabase Storage (bucket etiquetas, como folio.png)
+    const filename = folio + '.png';
+    const url = URL_SB + '/storage/v1/object/etiquetas/' + filename;
+    const r = await fetch(url, {
+      method: 'POST',
+      headers: { 'apikey': KEY, 'Authorization': 'Bearer ' + KEY, 'Content-Type': 'image/png', 'x-upsert': 'true' },
+      body: blob
+    });
+    if (r.ok) {
+      return URL_SB + '/storage/v1/object/public/etiquetas/' + filename;
+    }
+    console.warn('No se pudo subir QR demo:', await r.text());
+    return null;
+  } catch (e) {
+    console.warn('Error generando QR demo:', e);
+    return null;
   }
 }
 
@@ -440,7 +702,9 @@ async function registrarFardo() {
   const turnoVal = turno();
 
   if (!peso||peso<=0) { msg('msg-pesaje','Ingresa un peso válido','error'); return; }
-  if (!operador) { msg('msg-pesaje','Ingresa el nombre del operador','error'); return; }
+  if (!material) { msg('msg-pesaje','Selecciona un material','error'); return; }
+  if (!operador) { msg('msg-pesaje','Selecciona un operador','error'); return; }
+  if (!maquina) { msg('msg-pesaje','Selecciona una máquina','error'); return; }
 
   // Guardar datos del fardo pendiente para poder reintentar
   fardoPendiente = { folio: folio(bodega, material), peso, material, bodega, operador, maquina, turnoVal };
@@ -473,14 +737,26 @@ async function procesarImpresionYRegistro() {
     });
     resultImpresion = await r.json();
   } catch (e) {
-    // Flask no responde (offline o caído)
-    mostrarErrorImpresion('No se pudo conectar con la impresora (Flask offline). El fardo NO fue registrado.');
-    return;
+    // Flask no responde (offline o caído). Pedir clave admin SIEMPRE para modo demo.
+    const clave = prompt('⚠️ No hay conexión con la impresora (Flask offline).\n\nPara trabajar en MODO DEMO (impresión simulada, pero se guarda en la base de datos para pruebas), ingresa la clave de administración.\n\nDejar vacío para cancelar:');
+    if (clave === 'metalumrenca') {
+      const qrDemo = await generarYSubirQR(f, peso);
+      resultImpresion = { success: true, qr_url: qrDemo, demo: true };
+    } else {
+      if (clave) alert('Clave incorrecta');
+      mostrarErrorImpresion('No se pudo conectar con la impresora (Flask offline). El fardo NO fue registrado.');
+      return;
+    }
   }
 
   // Si la impresión falló, NO registrar
   if (!resultImpresion.success) {
-    mostrarErrorImpresion('La etiqueta no se imprimió: ' + (resultImpresion.message || 'error desconocido') + '. El fardo NO fue registrado.');
+    const errMsg = (resultImpresion.message || 'error desconocido');
+    mostrarErrorImpresion('La etiqueta no se imprimió: ' + errMsg + '. El fardo NO fue registrado.');
+    // Si el error parece de conexión/USB con la impresora, mostrar aviso grande
+    if (/usb|conex|conect|puerto|offline|no se pudo abrir|printer|impresora/i.test(errMsg)) {
+      mostrarAvisoUSB('impresora');
+    }
     return;
   }
 
@@ -493,20 +769,17 @@ async function procesarImpresionYRegistro() {
       method: 'POST',
       body: JSON.stringify({
         folio: f, peso, material_code: material, bodega, operador, maquina, turno: turnoVal,
+        timestamp: new Date().toISOString(),
         qr_url: resultImpresion.qr_url || null
       })
     });
 
-    msg('msg-pesaje', '✓ Fardo registrado e impreso: ' + f, 'ok');
-    if (resultImpresion.qr_url) {
-      mostrarModal(resultImpresion, operador, turnoVal, material);
-    }
+    // Aviso de éxito (el mismo mensaje con Flask o en demo)
+    mostrarAvisoExito('✓ Bulto registrado e impreso\n\nFolio: ' + f);
 
-    // Limpiar
+    // Limpiar todos los campos (dejar en blanco para el siguiente bulto)
     fardoPendiente = null;
-    document.getElementById('peso').value = '';
-    document.getElementById('peso-display').textContent = '—';
-    document.getElementById('peso-display').style.color = '#1D9E75';
+    limpiarCamposPesaje();
     await cargarStats();
     await cargarPesajes();
 
@@ -517,6 +790,19 @@ async function procesarImpresionYRegistro() {
     btn.disabled = false;
     btn.textContent = '+ Registrar fardo e imprimir etiqueta';
   }
+}
+
+// Aviso grande de error de USB (balanza o impresora) con instrucciones
+function mostrarAvisoUSB(dispositivo) {
+  const banner = document.getElementById('banner-usb');
+  document.getElementById('banner-usb-titulo').textContent = 'Error en USB (' + dispositivo + ')';
+  document.getElementById('banner-usb-texto').innerHTML =
+    'No se recibe señal de la ' + dispositivo + '.<br><br>' +
+    '<strong>1.</strong> Desconecta y reconecta el cable USB<br>' +
+    '<strong>2.</strong> Reinicia la aplicación (el Flask)<br><br>' +
+    'Si el problema persiste, revisa el adaptador USB.';
+  banner.style.display = 'block';
+  banner.scrollIntoView({ behavior: 'smooth', block: 'center' });
 }
 
 function mostrarErrorImpresion(texto) {
@@ -615,7 +901,7 @@ async function cargarHistorial() {
     const data = await sb(q);
     const el = document.getElementById('lista-historial');
     if (!data.length) { el.innerHTML='<div class="empty">Sin registros en ese período</div>'; return; }
-    const totalKilos = data.reduce((a,r)=>a+(r.peso||0),0);
+    const totalKilos = data.reduce((a,r)=>a+Number(r.peso||0),0);
     el.innerHTML = `<div style="padding:10px 0 14px;border-bottom:1px solid #f0f0ea;margin-bottom:10px;display:flex;gap:20px;">
       <span style="font-size:13px;color:#888;">${data.length} fardos</span>
       <span style="font-size:13px;font-weight:500;">${totalKilos.toLocaleString()} kg total</span>
@@ -649,6 +935,143 @@ checkFlask();
 cargarStats();
 cargarPesajes();
 setInterval(checkFlask, 30000);
+
+// =========================================================
+// CARGA DINÁMICA DE DROPDOWNS desde Supabase
+// =========================================================
+async function cargarDropdownsDinamicos() {
+  try {
+    const operadores = await sb('/rest/v1/operadores?activo=eq.true&order=nombre.asc&select=nombre');
+    const selOp = document.getElementById('operador');
+    if (selOp && operadores.length) {
+      selOp.innerHTML = '<option value="">— Seleccionar operador —</option>' + operadores.map(o => `<option value="${o.nombre}">${o.nombre}</option>`).join('');
+    }
+
+    const materiales = await sb('/rest/v1/materiales?activo=eq.true&order=nombre.asc&select=code,nombre');
+    const selMat = document.getElementById('material');
+    if (selMat && materiales.length) {
+      selMat.innerHTML = '<option value="">— Seleccionar material —</option>' + materiales.map(m => `<option value="${m.code}">${m.nombre} (${m.code})</option>`).join('');
+    }
+
+    const maquinas = await sb('/rest/v1/maquinas?activo=eq.true&order=nombre.asc&select=code,nombre');
+    const selMaq = document.getElementById('maquina');
+    if (selMaq && maquinas.length) {
+      selMaq.innerHTML = '<option value="">— Seleccionar máquina —</option>' + maquinas.map(m => `<option value="${m.code}">${m.nombre}</option>`).join('');
+    }
+  } catch (e) {
+    console.warn('No se pudieron cargar dropdowns dinámicos, usando los fijos:', e);
+  }
+}
+cargarDropdownsDinamicos().then(() => limpiarCamposPesaje());
+
+// =========================================================
+// ADMINISTRACIÓN: operadores, materiales, máquinas
+// =========================================================
+async function cargarAdmin() {
+  cargarListaOperadores();
+  cargarListaMateriales();
+  cargarListaMaquinas();
+}
+
+// ---- OPERADORES ----
+async function cargarListaOperadores() {
+  const cont = document.getElementById('adm-lista-operadores');
+  try {
+    const ops = await sb('/rest/v1/operadores?activo=eq.true&order=nombre.asc&select=id,nombre');
+    if (!ops.length) { cont.innerHTML = '<div class="empty">Sin operadores</div>'; return; }
+    cont.innerHTML = ops.map(o =>
+      `<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 12px;border-bottom:1px solid #eee;">
+        <span>${o.nombre}</span>
+        <button onclick="quitarOperador(${o.id}, '${o.nombre.replace(/'/g,"\\'")}')" style="background:none;border:1px solid #e0a0a0;color:#c44;border-radius:6px;padding:4px 12px;cursor:pointer;font-size:12px;">Quitar</button>
+      </div>`).join('');
+  } catch (e) { cont.innerHTML = '<div class="empty">Error: ' + e.message + '</div>'; }
+}
+async function agregarOperador() {
+  const nombre = document.getElementById('adm-op-nombre').value.trim();
+  if (!nombre) { alert('Escribe el nombre del operador'); return; }
+  try {
+    await sb('/rest/v1/operadores', { method:'POST', body: JSON.stringify({ nombre }) });
+    document.getElementById('adm-op-nombre').value = '';
+    cargarListaOperadores();
+    cargarDropdownsDinamicos();
+  } catch (e) { alert('Error agregando operador: ' + e.message); }
+}
+async function quitarOperador(id, nombre) {
+  if (!confirm('¿Quitar a "' + nombre + '"?')) return;
+  try {
+    await sb('/rest/v1/operadores?id=eq.' + id, { method:'PATCH', body: JSON.stringify({ activo: false }) });
+    cargarListaOperadores();
+    cargarDropdownsDinamicos();
+  } catch (e) { alert('Error quitando operador: ' + e.message); }
+}
+
+// ---- MATERIALES ----
+async function cargarListaMateriales() {
+  const cont = document.getElementById('adm-lista-materiales');
+  try {
+    const mats = await sb('/rest/v1/materiales?activo=eq.true&order=nombre.asc&select=id,code,nombre');
+    if (!mats.length) { cont.innerHTML = '<div class="empty">Sin materiales</div>'; return; }
+    cont.innerHTML = mats.map(m =>
+      `<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 12px;border-bottom:1px solid #eee;">
+        <span><strong>${m.code}</strong> — ${m.nombre}</span>
+        <button onclick="quitarMaterial(${m.id}, '${m.code}')" style="background:none;border:1px solid #e0a0a0;color:#c44;border-radius:6px;padding:4px 12px;cursor:pointer;font-size:12px;">Quitar</button>
+      </div>`).join('');
+  } catch (e) { cont.innerHTML = '<div class="empty">Error: ' + e.message + '</div>'; }
+}
+async function agregarMaterial() {
+  const code = document.getElementById('adm-mat-code').value.trim().toUpperCase();
+  const nombre = document.getElementById('adm-mat-nombre').value.trim();
+  if (!code || !nombre) { alert('Completa código y nombre del material'); return; }
+  try {
+    await sb('/rest/v1/materiales', { method:'POST', body: JSON.stringify({ code, nombre }) });
+    document.getElementById('adm-mat-code').value = '';
+    document.getElementById('adm-mat-nombre').value = '';
+    cargarListaMateriales();
+    cargarDropdownsDinamicos();
+  } catch (e) { alert('Error agregando material: ' + e.message); }
+}
+async function quitarMaterial(id, code) {
+  if (!confirm('¿Quitar el material "' + code + '"?')) return;
+  try {
+    await sb('/rest/v1/materiales?id=eq.' + id, { method:'PATCH', body: JSON.stringify({ activo: false }) });
+    cargarListaMateriales();
+    cargarDropdownsDinamicos();
+  } catch (e) { alert('Error quitando material: ' + e.message); }
+}
+
+// ---- MAQUINAS ----
+async function cargarListaMaquinas() {
+  const cont = document.getElementById('adm-lista-maquinas');
+  try {
+    const maqs = await sb('/rest/v1/maquinas?activo=eq.true&order=nombre.asc&select=id,code,nombre');
+    if (!maqs.length) { cont.innerHTML = '<div class="empty">Sin máquinas</div>'; return; }
+    cont.innerHTML = maqs.map(m =>
+      `<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 12px;border-bottom:1px solid #eee;">
+        <span><strong>${m.code}</strong> — ${m.nombre}</span>
+        <button onclick="quitarMaquina(${m.id}, '${m.code}')" style="background:none;border:1px solid #e0a0a0;color:#c44;border-radius:6px;padding:4px 12px;cursor:pointer;font-size:12px;">Quitar</button>
+      </div>`).join('');
+  } catch (e) { cont.innerHTML = '<div class="empty">Error: ' + e.message + '</div>'; }
+}
+async function agregarMaquina() {
+  const code = document.getElementById('adm-maq-code').value.trim().toUpperCase();
+  const nombre = document.getElementById('adm-maq-nombre').value.trim();
+  if (!code || !nombre) { alert('Completa código y nombre de la máquina'); return; }
+  try {
+    await sb('/rest/v1/maquinas', { method:'POST', body: JSON.stringify({ code, nombre }) });
+    document.getElementById('adm-maq-code').value = '';
+    document.getElementById('adm-maq-nombre').value = '';
+    cargarListaMaquinas();
+    cargarDropdownsDinamicos();
+  } catch (e) { alert('Error agregando máquina: ' + e.message); }
+}
+async function quitarMaquina(id, code) {
+  if (!confirm('¿Quitar la máquina "' + code + '"?')) return;
+  try {
+    await sb('/rest/v1/maquinas?id=eq.' + id, { method:'PATCH', body: JSON.stringify({ activo: false }) });
+    cargarListaMaquinas();
+    cargarDropdownsDinamicos();
+  } catch (e) { alert('Error quitando máquina: ' + e.message); }
+}
 </script>
 </body>
 </html>
