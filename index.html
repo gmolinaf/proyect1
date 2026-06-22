@@ -265,29 +265,35 @@
             <option>Nacional</option><option>Internacional</option><option>Entre bodegas</option>
           </select>
         </div>
-        <div><label>Material</label>
-          <select id="dp-material"><option value="">— Seleccionar —</option></select>
-        </div>
-        <div><label>Cantidad estimada (kg)</label>
-          <input type="number" id="dp-cantidad" placeholder="Ej: 5000" min="0"/>
-        </div>
-      </div>
-      <div class="grid3">
         <div><label>Transportista</label>
           <input type="text" id="dp-transportista" placeholder="Empresa o nombre"/>
         </div>
         <div><label>Patente</label>
           <input type="text" id="dp-patente" placeholder="Ej: ABCD12"/>
         </div>
-        <div><label>Operador</label>
+      </div>
+      <div class="grid2">
+        <div><label>Operador / Encargado</label>
           <input type="text" id="dp-operador" placeholder="Responsable"/>
         </div>
+        <div><label>Observaciones</label>
+          <input type="text" id="dp-obs" placeholder="Notas del despacho..."/>
+        </div>
       </div>
-      <div style="margin-bottom:12px;">
-        <label>Observaciones</label>
-        <textarea id="dp-obs" placeholder="Notas del despacho programado..."></textarea>
+
+      <!-- Agregar materiales por fila -->
+      <div style="border-top:1px solid #eee;padding-top:16px;margin-top:8px;">
+        <label>Agregar material a despachar</label>
+        <div style="display:flex;gap:8px;margin-bottom:12px;">
+          <select id="dp-mat-input" style="flex:1;"><option value="">— Seleccionar material —</option></select>
+          <input type="number" id="dp-kg-input" placeholder="kg" min="0" style="max-width:140px;" onkeydown="if(event.key==='Enter')agregarMaterialProgramado()"/>
+          <button class="btn-primary" style="width:auto;white-space:nowrap;" onclick="agregarMaterialProgramado()">+ Agregar</button>
+        </div>
+        <div id="dp-lista-materiales"><div class="empty">Sin materiales agregados</div></div>
+        <div id="dp-resumen" style="display:none;text-align:right;font-weight:600;margin-top:8px;padding:8px;background:#f5f5f0;border-radius:8px;"></div>
       </div>
-      <button class="btn-primary" onclick="programarDespacho()">+ Programar despacho</button>
+
+      <button class="btn-primary" onclick="programarDespacho()" style="margin-top:16px;">✓ Guardar despacho programado</button>
       <div class="msg" id="msg-programado"></div>
     </div>
 
@@ -455,11 +461,25 @@ function turnoFull() {
   if (h >= 14 && h < 22) return 'Tarde (14:00–22:00)';
   return 'Noche (22:00–06:00)';
 }
-function folio(bodega, mat) {
-  const p = {'Renca':'RE','Maipú':'MA','La Pintana':'LP','Talcahuano':'TA'};
-  const yr = new Date().getFullYear().toString().slice(2);
-  const n = String(Math.floor(Math.random()*99999)).padStart(5,'0');
-  return `${p[bodega]||'XX'}01-${yr}-${n}-${mat}`;
+// Mira cuál sería el siguiente folio (SIN consumirlo) para imprimir la etiqueta.
+// El número definitivo se reserva al guardar (registrar_fardo), evitando huecos.
+// Formato: PREFIJO-NNNN-CODIGO (ej: RN-0364-LATA), 4 dígitos.
+async function folio(bodega, mat) {
+  const p = {'Renca':'RN','Maipú':'MA','La Pintana':'LP','Talcahuano':'TA'};
+  const resp = await fetch(URL_SB + '/rest/v1/rpc/peek_siguiente_folio', {
+    method: 'POST',
+    headers: { 'apikey': KEY, 'Authorization': 'Bearer ' + KEY, 'Content-Type': 'application/json' },
+    body: '{}'
+  });
+  if (!resp.ok) throw new Error('No se pudo obtener el número de folio');
+  const num = await resp.json();
+  const n = String(num).padStart(4, '0');
+  return `${p[bodega]||'XX'}-${n}-${mat}`;
+}
+
+// Prefijo de bodega (para registrar_fardo)
+function prefijoBodega(bodega) {
+  return {'Renca':'RN','Maipú':'MA','La Pintana':'LP','Talcahuano':'TA'}[bodega] || 'XX';
 }
 function msg(id, txt, tipo) {
   const el = document.getElementById(id);
@@ -842,7 +862,15 @@ async function registrarFardo() {
   if (!maquina) { msg('msg-pesaje','Selecciona una máquina','error'); return; }
 
   // Guardar datos del fardo pendiente para poder reintentar
-  fardoPendiente = { folio: folio(bodega, material), peso, material, bodega, operador, maquina, turnoVal };
+  // El folio se pide a Supabase (correlativo global único)
+  let folioGenerado;
+  try {
+    folioGenerado = await folio(bodega, material);
+  } catch(e) {
+    msg('msg-pesaje', 'No se pudo generar el folio: ' + e.message, 'error');
+    return;
+  }
+  fardoPendiente = { folio: folioGenerado, peso, material, bodega, operador, maquina, turnoVal };
   await procesarImpresionYRegistro();
 }
 
@@ -900,17 +928,29 @@ async function procesarImpresionYRegistro() {
   msg('msg-pesaje', '✓ Etiqueta impresa. Registrando en sistema...', 'info');
 
   try {
-    await sb('/rest/v1/pesaje_data', {
+    // Usar registrar_fardo: reserva el número de forma atómica al insertar (sin huecos).
+    // Devuelve el folio FINAL que quedó guardado (puede diferir del impreso si justo
+    // otra bodega registró en el mismo instante, pero es lo correcto).
+    const resp = await fetch(URL_SB + '/rest/v1/rpc/registrar_fardo', {
       method: 'POST',
+      headers: { 'apikey': KEY, 'Authorization': 'Bearer ' + KEY, 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        folio: f, peso, material_code: material, bodega, operador, maquina, turno: turnoVal,
-        timestamp: new Date().toISOString(),
-        qr_url: resultImpresion.qr_url || null
+        p_prefijo: prefijoBodega(bodega),
+        p_material: material,
+        p_peso: peso,
+        p_material_code: material,
+        p_bodega: bodega,
+        p_operador: operador,
+        p_maquina: maquina,
+        p_turno: turnoVal,
+        p_qr_url: resultImpresion.qr_url || null
       })
     });
+    if (!resp.ok) throw new Error(await resp.text());
+    const folioFinal = await resp.json();  // folio realmente guardado
 
     // Aviso de éxito (el mismo mensaje con Flask o en demo)
-    mostrarAvisoExito('✓ Bulto registrado e impreso\n\nFolio: ' + f);
+    mostrarAvisoExito('✓ Bulto registrado e impreso\n\nFolio: ' + folioFinal);
 
     // Limpiar todos los campos (dejar en blanco para el siguiente bulto)
     fardoPendiente = null;
@@ -970,8 +1010,8 @@ async function agregarFolioContingencia() {
   if (!numero) { msg('msg-contingencia', 'Escribe el número del folio', 'error'); return; }
   // Solo dígitos
   if (!/^\d+$/.test(numero)) { msg('msg-contingencia', 'Ingresa solo el número del folio (ej: 24)', 'error'); return; }
-  // Rellenar con ceros hasta 5 dígitos (24 -> 00024)
-  const numPad = numero.padStart(5, '0');
+  // Rellenar con ceros hasta 4 dígitos (24 -> 0024)
+  const numPad = numero.padStart(4, '0');
 
   const origen = document.getElementById('c-origen').value;
 
@@ -1084,33 +1124,84 @@ async function registrarContingencia() {
   }
 }
 
-// ===== DESPACHOS PROGRAMADOS =====
+// ===== DESPACHOS PROGRAMADOS (con filas de materiales) =====
+let materialesProgramados = [];  // {code, nombre, kg}
+
+function agregarMaterialProgramado() {
+  const sel = document.getElementById('dp-mat-input');
+  const code = sel.value;
+  const kg = Number(document.getElementById('dp-kg-input').value);
+  if (!code) { msg('msg-programado', 'Selecciona un material', 'error'); return; }
+  if (!kg || kg <= 0) { msg('msg-programado', 'Ingresa los kg', 'error'); return; }
+  // Si el material ya está, sumar
+  const existe = materialesProgramados.find(m => m.code === code);
+  if (existe) { existe.kg += kg; }
+  else { materialesProgramados.push({ code, nombre: MAT_NOM_LOCAL[code] || code, kg }); }
+  sel.value = '';
+  document.getElementById('dp-kg-input').value = '';
+  msg('msg-programado', '', '');
+  renderMaterialesProgramados();
+}
+
+function renderMaterialesProgramados() {
+  const cont = document.getElementById('dp-lista-materiales');
+  const resumen = document.getElementById('dp-resumen');
+  if (!materialesProgramados.length) {
+    cont.innerHTML = '<div class="empty">Sin materiales agregados</div>';
+    resumen.style.display = 'none';
+    return;
+  }
+  cont.innerHTML = materialesProgramados.map((m, i) =>
+    `<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 12px;border-bottom:1px solid #eee;">
+      <strong>${m.nombre}</strong>
+      <div style="display:flex;align-items:center;gap:12px;">
+        <span style="font-weight:600;">${m.kg.toLocaleString()} kg</span>
+        <button onclick="quitarMaterialProgramado(${i})" style="background:none;border:1px solid #e0a0a0;color:#c44;border-radius:6px;padding:3px 10px;cursor:pointer;font-size:12px;">Quitar</button>
+      </div>
+    </div>`).join('');
+  const totalKg = materialesProgramados.reduce((a,m)=>a+m.kg,0);
+  resumen.style.display = 'block';
+  resumen.textContent = `${materialesProgramados.length} materiales · ${totalKg.toLocaleString()} kg total`;
+}
+
+function quitarMaterialProgramado(i) {
+  materialesProgramados.splice(i, 1);
+  renderMaterialesProgramados();
+}
+
 async function programarDespacho() {
-  // Todos los campos opcionales. Se arma solo con lo que tenga valor.
-  const obj = {
+  if (!materialesProgramados.length) { msg('msg-programado', 'Agrega al menos un material', 'error'); return; }
+
+  // Datos comunes del despacho
+  const comun = {
     fecha_programada: document.getElementById('dp-fecha').value || null,
     origen: document.getElementById('dp-origen').value || null,
     destino: document.getElementById('dp-destino').value || null,
     tipo_despacho: document.getElementById('dp-tipo').value || null,
-    material_code: document.getElementById('dp-material').value || null,
-    cantidad_estimada: document.getElementById('dp-cantidad').value ? Number(document.getElementById('dp-cantidad').value) : null,
     transportista: document.getElementById('dp-transportista').value.trim() || null,
     patente: document.getElementById('dp-patente').value.trim().toUpperCase() || null,
     operador: document.getElementById('dp-operador').value.trim() || null,
     observaciones: document.getElementById('dp-obs').value.trim() || null,
     estado: 'programado'
   };
+  // grupo_id común para unir los materiales de este despacho
+  const grupoId = 'GP-' + Date.now();
 
-  // Validación mínima: al menos algún campo con dato
-  const tieneAlgo = Object.entries(obj).some(([k,v]) => k !== 'estado' && v !== null);
-  if (!tieneAlgo) { msg('msg-programado', 'Completa al menos un campo', 'error'); return; }
+  // Una fila por material, todas con el mismo grupo_id
+  const filas = materialesProgramados.map(m => ({
+    ...comun,
+    grupo_id: grupoId,
+    material_code: m.code,
+    cantidad_estimada: m.kg
+  }));
 
   try {
-    await sb('/rest/v1/despachos_programados', { method:'POST', body: JSON.stringify(obj) });
+    await sb('/rest/v1/despachos_programados', { method:'POST', body: JSON.stringify(filas) });
     msg('msg-programado', '✓ Despacho programado guardado', 'ok');
-    // Limpiar campos
-    ['dp-fecha','dp-cantidad','dp-transportista','dp-patente','dp-operador','dp-obs'].forEach(id=>document.getElementById(id).value='');
-    ['dp-origen','dp-destino','dp-tipo','dp-material'].forEach(id=>document.getElementById(id).value='');
+    materialesProgramados = [];
+    renderMaterialesProgramados();
+    ['dp-fecha','dp-transportista','dp-patente','dp-operador','dp-obs'].forEach(id=>document.getElementById(id).value='');
+    ['dp-origen','dp-destino','dp-tipo'].forEach(id=>document.getElementById(id).value='');
     cargarProgramados();
   } catch(e) {
     msg('msg-programado', 'Error: ' + e.message, 'error');
@@ -1122,29 +1213,53 @@ async function cargarProgramados() {
   try {
     const data = await sb('/rest/v1/despachos_programados?select=*&estado=eq.programado&order=fecha_programada.asc');
     if (!data.length) { el.innerHTML = '<div class="empty">Sin despachos programados</div>'; return; }
-    el.innerHTML = data.map(r => {
+
+    // Agrupar por grupo_id (los que no tienen grupo van solos por id)
+    const grupos = {};
+    data.forEach(r => {
+      const k = r.grupo_id || ('solo-' + r.id);
+      if (!grupos[k]) grupos[k] = [];
+      grupos[k].push(r);
+    });
+
+    el.innerHTML = Object.values(grupos).map(filas => {
+      const r = filas[0]; // datos comunes del primer registro
       const fecha = r.fecha_programada ? new Date(r.fecha_programada + 'T00:00:00').toLocaleDateString('es-CL',{day:'2-digit',month:'2-digit',year:'2-digit'}) : 'Sin fecha';
-      const matNombre = r.material_code ? (MAT_NOM_LOCAL[r.material_code] || r.material_code) : '—';
-      const cant = r.cantidad_estimada ? Number(r.cantidad_estimada).toLocaleString() + ' kg' : '—';
-      const esc = s => (s||'').toString().replace(/'/g,"\\'");
-      return `<div class="registro-row">
+      const totalKg = filas.reduce((a,f)=>a+Number(f.cantidad_estimada||0),0);
+      // Detalle de materiales
+      const matsDetalle = filas.map(f => `${MAT_NOM_LOCAL[f.material_code]||f.material_code}: ${Number(f.cantidad_estimada||0).toLocaleString()} kg`).join(' · ');
+      const ids = filas.map(f=>f.id).join(',');
+      return `<div class="registro-row" style="align-items:flex-start;">
         <div class="registro-icon">📅</div>
         <div class="registro-info">
           <div class="folio">${(r.origen||'—')} → ${(r.destino||'—')}</div>
-          <div class="meta">${fecha} · ${matNombre} · ${(r.tipo_despacho||'—')} · ${(r.transportista||'—')} ${(r.patente?'· '+r.patente:'')}</div>
+          <div class="meta">${fecha} · ${(r.tipo_despacho||'—')} · ${(r.transportista||'—')} ${(r.patente?'· '+r.patente:'')}</div>
+          <div class="meta" style="margin-top:4px;color:#1D9E75;">${matsDetalle}</div>
         </div>
         <div class="registro-right" style="display:flex;align-items:center;gap:8px;">
           <div>
-            <div class="peso">${cant}</div>
-            <div class="hora">programado</div>
+            <div class="peso">${totalKg.toLocaleString()} kg</div>
+            <div class="hora">${filas.length} mat.</div>
           </div>
-          <button onclick="eliminarProgramado(${r.id})" title="Eliminar" style="background:none;border:1px solid #e0a0a0;color:#c44;border-radius:6px;padding:4px 8px;cursor:pointer;font-size:14px;">🗑️</button>
+          <button onclick="eliminarGrupoProgramado('${ids}')" title="Eliminar" style="background:none;border:1px solid #e0a0a0;color:#c44;border-radius:6px;padding:4px 8px;cursor:pointer;font-size:14px;">🗑️</button>
         </div>
       </div>`;
     }).join('');
   } catch(e) {
     el.innerHTML = '<div class="empty">Error: ' + e.message + '</div>';
   }
+}
+
+async function eliminarGrupoProgramado(idsStr) {
+  if (!confirm('¿Eliminar este despacho programado completo?')) return;
+  try {
+    const ids = idsStr.split(',');
+    // Borrar todas las filas del grupo
+    for (const id of ids) {
+      await sb('/rest/v1/despachos_programados?id=eq.' + id, { method:'DELETE' });
+    }
+    cargarProgramados();
+  } catch(e) { alert('Error: ' + e.message); }
 }
 
 async function eliminarProgramado(id) {
@@ -1251,13 +1366,13 @@ async function cargarDropdownsDinamicos() {
     if (selMat && materiales.length) {
       selMat.innerHTML = '<option value="">— Seleccionar material —</option>' + materiales.map(m => `<option value="${m.code}">${m.nombre} (${m.code})</option>`).join('');
     }
-    // Llenar también el dropdown de material de despachos programados y el mapa local
+    // Llenar el dropdown de material de despachos programados (filas) y el mapa local
     if (materiales.length) {
       MAT_NOM_LOCAL = {};
       materiales.forEach(m => { MAT_NOM_LOCAL[m.code] = m.nombre; });
-      const selMatDp = document.getElementById('dp-material');
+      const selMatDp = document.getElementById('dp-mat-input');
       if (selMatDp) {
-        selMatDp.innerHTML = '<option value="">— Seleccionar —</option>' + materiales.map(m => `<option value="${m.code}">${m.nombre} (${m.code})</option>`).join('');
+        selMatDp.innerHTML = '<option value="">— Seleccionar material —</option>' + materiales.map(m => `<option value="${m.code}">${m.nombre} (${m.code})</option>`).join('');
       }
     }
 
