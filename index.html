@@ -603,9 +603,9 @@ function pesoManual() {
     if (clave) alert('Clave incorrecta');
     return;
   }
-  const pesoStr = prompt('Ingresa el peso en kg (solo números):');
+  const pesoStr = prompt('Ingresa el peso en kg (ej: 465.5):');
   if (pesoStr === null) return;
-  const peso = parseInt(pesoStr);
+  const peso = parseFloat(pesoStr);
   if (isNaN(peso) || peso <= 0) {
     alert('Peso inválido. Debe ser un número mayor que 0.');
     return;
@@ -827,7 +827,7 @@ async function generarYSubirQR(folio, peso) {
 }
 
 async function registrarFardo() {
-  const peso = parseInt(document.getElementById('peso').value);
+  const peso = parseFloat(document.getElementById('peso').value);
   const bodega = 'Renca';  // Solo se usa Renca
   const material = document.getElementById('material').value;
   const subclasificacion = document.getElementById('subclasificacion').value;
