@@ -143,47 +143,34 @@
       </div>
 
       <!-- CAMPOS -->
+      <!-- Material (izquierda) + Subclasificación (derecha) -->
       <div class="grid2" style="margin-bottom:12px;">
-        <div><label>Bodega</label>
-          <select id="bodega">
-            <option>Renca</option><option>Maipú</option>
-            <option>La Pintana</option><option>Talcahuano</option>
+        <div><label>Material</label>
+          <select id="material" onchange="onMaterialChange()">
+            <option value="">— Seleccionar material —</option>
           </select>
         </div>
-        <div><label>Material</label>
-          <select id="material">
-            <option value="TEN">TENSE (TEN)</option>
-            <option value="UBC">UBC (UBC)</option>
-            <option value="INX304">AC INOX 304 (INX304)</option>
-            <option value="PFB">PERFIL B (PFB)</option>
-            <option value="TTCA">TT COLOR A (TTCA)</option>
-            <option value="OFF">OFFSET (OFF)</option>
-            <option value="TAB">T. TABOR (TAB)</option>
-            <option value="PPN">P. PINTADO (PPN)</option>
-            <option value="RAD">RADIADOR (RAD)</option>
-            <option value="FLC">FOIL COLOR (FLC)</option>
-            <option value="FLB">FOIL BCO. (FLB)</option>
-            <option value="PFA">PERFIL A (PFA)</option>
-            <option value="INX316">AC INOX 316 (INX316)</option>
-            <option value="PAN">P. ANODIZADO (PAN)</option>
-            <option value="TTCB">TT COLOR B (TTCB)</option>
-            <option value="VIG">VIGAS (VIG)</option>
-            <option value="PFC">PERFIL C (PFC)</option>
-            <option value="CAB">CABLE (CAB)</option>
-            <option value="CABGR">CABLE C/GR (CABGR)</option>
-            <option value="CABNG">CABLE NG C/A (CABNG)</option>
-            <option value="CABZ">CABLE C/Z (CABZ)</option>
-            <option value="RADM">RAD. MIXTO (RADM)</option>
-            <option value="AER">AEROSOL/POM (AER)</option>
-            <option value="BOB">BOBINAS (BOB)</option>
-            <option value="LLA">LLANTAS (LLA)</option>
-            <option value="INXNI">AC INOX NI (INXNI)</option>
-            <option value="CPX">COMPLEX (CPX)</option>
-            <option value="CPXN">COMPLEX NES (CPXN)</option>
+        <div id="sub-container" style="display:none;">
+          <label>Subclasificación</label>
+          <select id="subclasificacion">
+            <option value="">— Seleccionar —</option>
           </select>
         </div>
       </div>
+      <!-- Máquina (izquierda) + Operador (derecha) -->
       <div class="grid2" style="margin-bottom:12px;">
+        <div><label>Máquina</label>
+          <select id="maquina">
+            <option value="">— Seleccionar —</option>
+            <option value="V1">Vertical 1</option>
+            <option value="V2">Vertical 2</option>
+            <option value="V3">Vertical 3</option>
+            <option value="BRIQ12">Briqueteadora 1 y 2</option>
+            <option value="BRIQCH">Briqueteadora China</option>
+            <option value="PATIO">PATIO</option>
+            <option value="EXT">EXTERNO</option>
+          </select>
+        </div>
         <div><label>Operador</label>
           <select id="operador">
             <option value="Arredondo Maldonado, Cristian">Arredondo Maldonado, Cristian</option>
@@ -206,17 +193,6 @@
             <option value="Parada Villar, Miguel">Parada Villar, Miguel</option>
             <option value="Stivens, Frantz">Stivens, Frantz</option>
             <option value="Verdugo Vallejos, Elizardo">Verdugo Vallejos, Elizardo</option>
-          </select>
-        </div>
-        <div><label>Máquina</label>
-          <select id="maquina">
-            <option value="EVI">EVI</option>
-            <option value="EVII">EVII</option>
-            <option value="EVIII">EVIII</option>
-            <option value="BRIQ-1-2">Briqueteadoras 1 y 2</option>
-            <option value="BRIQ-CHINA">Briqueteadora CHINA</option>
-            <option value="CANDENSOR">Candensor</option>
-            <option value="CHATARRERA">Chatarrera</option>
           </select>
         </div>
       </div>
@@ -548,14 +524,16 @@ function limpiarCamposPesaje() {
   document.getElementById('peso-display').style.color = '#1D9E75';
   const ma = document.getElementById('manual-activo');
   if (ma) ma.style.display = 'none';
-  // Bodega siempre vuelve a Renca
-  const bod = document.getElementById('bodega');
-  if (bod) bod.value = 'Renca';
   // Material, operador y máquina vuelven a la opción vacía (— Seleccionar —)
   ['material','operador','maquina'].forEach(id=>{
     const el = document.getElementById(id);
     if (el) el.value = '';
   });
+  // Resetear subclasificación (ocultar el select del árbol)
+  const subCont = document.getElementById('sub-container');
+  if (subCont) subCont.style.display = 'none';
+  const selSub = document.getElementById('subclasificacion');
+  if (selSub) selSub.value = '';
 }
 
 async function cargarStats() {
@@ -850,14 +828,20 @@ async function generarYSubirQR(folio, peso) {
 
 async function registrarFardo() {
   const peso = parseInt(document.getElementById('peso').value);
-  const bodega = document.getElementById('bodega').value;
+  const bodega = 'Renca';  // Solo se usa Renca
   const material = document.getElementById('material').value;
+  const subclasificacion = document.getElementById('subclasificacion').value;
   const operador = document.getElementById('operador').value.trim();
   const maquina = document.getElementById('maquina').value;
   const turnoVal = turno();
 
   if (!peso||peso<=0) { msg('msg-pesaje','Ingresa un peso válido','error'); return; }
   if (!material) { msg('msg-pesaje','Selecciona un material','error'); return; }
+  // Si el material tiene subclasificaciones, es obligatorio elegir una
+  const matInfo = ARBOL_MATERIALES[material];
+  if (matInfo && matInfo.subs && matInfo.subs.length > 0 && !subclasificacion) {
+    msg('msg-pesaje','Selecciona la subclasificación','error'); return;
+  }
   if (!operador) { msg('msg-pesaje','Selecciona un operador','error'); return; }
   if (!maquina) { msg('msg-pesaje','Selecciona una máquina','error'); return; }
 
@@ -870,7 +854,7 @@ async function registrarFardo() {
     msg('msg-pesaje', 'No se pudo generar el folio: ' + e.message, 'error');
     return;
   }
-  fardoPendiente = { folio: folioGenerado, peso, material, bodega, operador, maquina, turnoVal };
+  fardoPendiente = { folio: folioGenerado, peso, material, subclasificacion, bodega, operador, maquina, turnoVal };
   await procesarImpresionYRegistro();
 }
 
@@ -879,7 +863,7 @@ let fardoPendiente = null;
 
 async function procesarImpresionYRegistro() {
   if (!fardoPendiente) return;
-  const { folio: f, peso, material, bodega, operador, maquina, turnoVal } = fardoPendiente;
+  const { folio: f, peso, material, subclasificacion, bodega, operador, maquina, turnoVal } = fardoPendiente;
   const btn = document.getElementById('btn-registrar');
 
   // Ocultar botón de reintento si estaba visible
@@ -939,6 +923,7 @@ async function procesarImpresionYRegistro() {
         p_material: material,
         p_peso: peso,
         p_material_code: material,
+        p_subclasificacion: subclasificacion || null,
         p_bodega: bodega,
         p_operador: operador,
         p_maquina: maquina,
@@ -1351,6 +1336,59 @@ setInterval(checkFlask, 30000);
 // =========================================================
 // CARGA DINÁMICA DE DROPDOWNS desde Supabase
 // =========================================================
+// ===== ÁRBOL DE MATERIALES =====
+// material padre (code) -> {nombre, subs:[...]}. Se guarda material_code=code del padre
+// y subclasificacion=la opción elegida (o vacío si el material no tiene subs).
+const ARBOL_MATERIALES = {
+  'LATA':  {nombre:'LATAS', subs:['METALUM','SEVERINO','STEEL','PLACILLA','TALCAHUANO']},
+  'LBCH':  {nombre:'LATAS BALL CHILE', subs:[]},
+  'PERF':  {nombre:'PERFIL', subs:['A','B','ANODIZADO','PINTADO']},
+  'TENS':  {nombre:'TENSE', subs:['LIMPIO','SUCIO']},
+  'OFFS':  {nombre:'OFFSET', subs:[]},
+  'PIST':  {nombre:'PISTONES', subs:[]},
+  'LLAN':  {nombre:'LLANTAS', subs:['NORMAL','CAMIÓN']},
+  'POMO':  {nombre:'POMO', subs:['CONTAMINADO','NORMAL']},
+  'BLAN':  {nombre:'BLANDO', subs:[]},
+  'TTCO':  {nombre:'TT COLOR', subs:['A','B']},
+  'CPXN':  {nombre:'COMPLEX NESPRESSO', subs:['NORMAL','B']},
+  'CPXU':  {nombre:'COMPLEX UNISAN', subs:[]},
+  'CPX':   {nombre:'COMPLEX', subs:[]},
+  'RADI':  {nombre:'RADIADOR', subs:['NORMAL','MIXTO']},
+  'FOIL':  {nombre:'FOIL', subs:['VINOS','CHOC','BANDEJAS','REMEDIO']},
+  'INX304':{nombre:'ACERO INOX 304', subs:[]},
+  'AC200': {nombre:'ACERO 200', subs:[]},
+  'INX316':{nombre:'ACERO INOX 316', subs:[]},
+  'PLAE':  {nombre:'PLANCHAS AEROPUERTO', subs:[]},
+  'HOJA':  {nombre:'HOJALATA', subs:[]},
+  'CABL':  {nombre:'CABLE', subs:['COBRE','ALUMINIO']},
+  'CHAT':  {nombre:'CHATARRA', subs:[]},
+};
+
+// Llena el dropdown de material (padres) desde el árbol
+function llenarMaterialesArbol() {
+  const sel = document.getElementById('material');
+  if (!sel) return;
+  sel.innerHTML = '<option value="">— Seleccionar material —</option>' +
+    Object.entries(ARBOL_MATERIALES).map(([code, m]) =>
+      `<option value="${code}">${m.nombre}</option>`).join('');
+}
+
+// Cuando cambia el material padre: muestra/oculta el select de subclasificación
+function onMaterialChange() {
+  const code = document.getElementById('material').value;
+  const cont = document.getElementById('sub-container');
+  const selSub = document.getElementById('subclasificacion');
+  const mat = ARBOL_MATERIALES[code];
+  if (mat && mat.subs && mat.subs.length > 0) {
+    selSub.innerHTML = '<option value="">— Seleccionar —</option>' +
+      mat.subs.map(s => `<option value="${s}">${s}</option>`).join('');
+    cont.style.display = 'block';
+  } else {
+    cont.style.display = 'none';
+    selSub.innerHTML = '<option value="">— Seleccionar —</option>';
+  }
+}
+
 // Mapa local code->nombre de material (para mostrar en programados)
 let MAT_NOM_LOCAL = {};
 async function cargarDropdownsDinamicos() {
@@ -1361,19 +1399,16 @@ async function cargarDropdownsDinamicos() {
       selOp.innerHTML = '<option value="">— Seleccionar operador —</option>' + operadores.map(o => `<option value="${o.nombre}">${o.nombre}</option>`).join('');
     }
 
-    const materiales = await sb('/rest/v1/materiales?activo=eq.true&order=nombre.asc&select=code,nombre');
-    const selMat = document.getElementById('material');
-    if (selMat && materiales.length) {
-      selMat.innerHTML = '<option value="">— Seleccionar material —</option>' + materiales.map(m => `<option value="${m.code}">${m.nombre} (${m.code})</option>`).join('');
-    }
-    // Llenar el dropdown de material de despachos programados (filas) y el mapa local
-    if (materiales.length) {
-      MAT_NOM_LOCAL = {};
-      materiales.forEach(m => { MAT_NOM_LOCAL[m.code] = m.nombre; });
-      const selMatDp = document.getElementById('dp-mat-input');
-      if (selMatDp) {
-        selMatDp.innerHTML = '<option value="">— Seleccionar material —</option>' + materiales.map(m => `<option value="${m.code}">${m.nombre} (${m.code})</option>`).join('');
-      }
+    // Material en árbol (desde la constante, no de Supabase)
+    llenarMaterialesArbol();
+    // Mapa code->nombre desde el árbol (para programados y otros)
+    MAT_NOM_LOCAL = {};
+    Object.entries(ARBOL_MATERIALES).forEach(([code, m]) => { MAT_NOM_LOCAL[code] = m.nombre; });
+    // Dropdown de material de despachos programados (filas)
+    const selMatDp = document.getElementById('dp-mat-input');
+    if (selMatDp) {
+      selMatDp.innerHTML = '<option value="">— Seleccionar material —</option>' +
+        Object.entries(ARBOL_MATERIALES).map(([code, m]) => `<option value="${code}">${m.nombre}</option>`).join('');
     }
 
     const maquinas = await sb('/rest/v1/maquinas?activo=eq.true&order=nombre.asc&select=code,nombre');
