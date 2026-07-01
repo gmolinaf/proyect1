@@ -364,6 +364,25 @@
 
   <!-- ADMIN -->
   <div class="section" id="sec-admin">
+
+    <!-- BUSCAR Y MODIFICAR FOLIO (primero) -->
+    <div class="card">
+      <h2>🔍 Buscar y modificar fardo</h2>
+      <p style="color:#888;font-size:12px;margin-top:-4px;">Corrige el material, subclasificación o peso de un fardo. Cada cambio queda registrado para auditoría.</p>
+      <div style="display:flex;gap:8px;margin-bottom:12px;">
+        <input type="text" id="adm-buscar-folio" placeholder="Folio o número (ej: 462 o RN-0462-TTCO)"/>
+        <button class="btn-primary" style="width:auto;white-space:nowrap;" onclick="buscarFolioAdmin()">Buscar</button>
+      </div>
+      <div id="adm-resultado-folio"></div>
+    </div>
+
+    <!-- HISTORIAL DE AUDITORÍA -->
+    <div class="card">
+      <h2>📋 Historial de cambios</h2>
+      <p style="color:#888;font-size:12px;margin-top:-4px;">Últimas modificaciones y reimpresiones registradas.</p>
+      <div id="adm-historial"><div class="empty">Cargando...</div></div>
+    </div>
+
     <div class="card">
       <h2>⚙️ Administración de catálogos</h2>
       <p style="color:#888;font-size:13px;margin-top:-4px;">Agrega o quita operadores, materiales y máquinas. Los cambios se reflejan automáticamente en los dropdowns.</p>
@@ -382,10 +401,13 @@
     <!-- MATERIALES -->
     <div class="card">
       <h2>Materiales</h2>
-      <p style="color:#888;font-size:12px;margin-top:-4px;">El <strong>código</strong> va impreso en la etiqueta. El <strong>nombre</strong> se ve en los dashboards.</p>
-      <div style="display:flex;gap:8px;margin-bottom:12px;">
+      <p style="color:#888;font-size:12px;margin-top:-4px;">El <strong>código</strong> va impreso en la etiqueta. El <strong>nombre</strong> se ve en los dashboards. La <strong>subcategoría</strong> es opcional (ej: Cobre + H queda como "Cobre H").</p>
+      <div style="display:flex;gap:8px;margin-bottom:8px;">
         <input type="text" id="adm-mat-code" placeholder="Código (ej: CU)" style="max-width:140px;"/>
-        <input type="text" id="adm-mat-nombre" placeholder="Nombre completo (ej: Cobre)"/>
+        <input type="text" id="adm-mat-nombre" placeholder="Nombre (ej: Cobre)"/>
+      </div>
+      <div style="display:flex;gap:8px;margin-bottom:12px;">
+        <input type="text" id="adm-mat-subs" placeholder="Subcategoría (ej: H) — opcional" style="max-width:200px;"/>
         <button class="btn-primary" style="width:auto;white-space:nowrap;" onclick="agregarMaterial()">+ Agregar</button>
       </div>
       <div id="adm-lista-materiales"><div class="empty">Cargando...</div></div>
@@ -1429,6 +1451,315 @@ async function cargarAdmin() {
   cargarListaOperadores();
   cargarListaMateriales();
   cargarListaMaquinas();
+  cargarHistorialAuditoria();
+}
+
+// ═══════════════════════════════════════════════════════════
+// BUSCAR Y MODIFICAR FARDO (Admin) + AUDITORÍA
+// ═══════════════════════════════════════════════════════════
+
+let fardoEnEdicion = null;  // guarda el fardo que se está editando
+
+// Buscar un fardo por folio o por número
+async function buscarFolioAdmin() {
+  const cont = document.getElementById('adm-resultado-folio');
+  let valor = document.getElementById('adm-buscar-folio').value.trim();
+  if (!valor) { alert('Ingresa un folio o número'); return; }
+
+  cont.innerHTML = '<div class="empty">Buscando...</div>';
+
+  try {
+    let query;
+    // Si es solo número (ej: 462), buscar por el patrón del folio
+    if (/^\d+$/.test(valor)) {
+      let num = valor;
+      while (num.length < 4) num = '0' + num;
+      query = '/rest/v1/pesaje_data?folio=like.*-' + num + '-*&select=*';
+    } else {
+      // Folio completo
+      query = '/rest/v1/pesaje_data?folio=eq.' + encodeURIComponent(valor) + '&select=*';
+    }
+
+    const res = await sb(query);
+    if (!res.length) {
+      cont.innerHTML = '<div class="empty">No se encontró ningún fardo con "' + valor + '"</div>';
+      return;
+    }
+    if (res.length > 1) {
+      cont.innerHTML = '<div class="empty">Se encontró más de un fardo. Usa el folio completo.</div>';
+      return;
+    }
+
+    fardoEnEdicion = res[0];
+    renderPanelEdicion(fardoEnEdicion);
+
+  } catch (e) {
+    cont.innerHTML = '<div class="empty">Error: ' + e.message + '</div>';
+  }
+}
+
+// Dibuja el panel de edición del fardo encontrado
+function renderPanelEdicion(f) {
+  const cont = document.getElementById('adm-resultado-folio');
+  const sub = f.subclasificacion || '';
+  const estado = f.anulado ? '<span style="color:#c44;">ANULADO</span>'
+    : (f.despachado ? '<span style="color:#e09000;">DESPACHADO</span>'
+    : '<span style="color:#1D9E75;">En stock</span>');
+
+  // Opciones de material (padres del árbol)
+  const opcionesMaterial = Object.entries(ARBOL_MATERIALES).map(([code, m]) =>
+    `<option value="${code}" ${code === f.material_code ? 'selected' : ''}>${m.nombre}</option>`).join('');
+
+  cont.innerHTML = `
+    <div style="border:1px solid #ddd;border-radius:10px;padding:16px;background:#fafafa;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
+        <strong style="font-size:16px;">${f.folio}</strong>
+        <span style="font-size:12px;">${estado}</span>
+      </div>
+      <div style="font-size:12px;color:#888;margin-bottom:14px;">
+        Bodega: ${f.bodega || '—'} · Máquina: ${f.maquina || '—'} · Operador: ${f.operador || '—'}
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px;">
+        <div>
+          <label style="font-size:12px;color:#666;display:block;margin-bottom:4px;">Material</label>
+          <select id="edit-material" onchange="onEditMaterialChange()" style="width:100%;padding:8px;">
+            ${opcionesMaterial}
+          </select>
+        </div>
+        <div id="edit-sub-container">
+          <label style="font-size:12px;color:#666;display:block;margin-bottom:4px;">Subclasificación</label>
+          <select id="edit-subclasificacion" style="width:100%;padding:8px;">
+            <option value="">— Seleccionar —</option>
+          </select>
+        </div>
+      </div>
+
+      <div style="margin-bottom:16px;">
+        <label style="font-size:12px;color:#666;display:block;margin-bottom:4px;">Peso (kg)</label>
+        <input type="number" id="edit-peso" step="0.1" value="${f.peso}" style="width:100%;padding:8px;"/>
+      </div>
+
+      <div style="display:flex;gap:8px;">
+        <button class="btn-primary" style="flex:1;" onclick="guardarCambiosFardo()">💾 Guardar cambios</button>
+        <button style="flex:1;background:#1a1a1a;border:1px solid #2a2a2a;color:#fff;border-radius:8px;padding:10px;cursor:pointer;" onclick="reimprimirFardo()">🖨️ Reimprimir etiqueta</button>
+      </div>
+    </div>`;
+
+  // Inicializar el select de subclasificación según el material actual
+  onEditMaterialChange();
+  // Preseleccionar la subclasificación actual
+  if (sub) {
+    const selSub = document.getElementById('edit-subclasificacion');
+    if (selSub) selSub.value = sub;
+  }
+}
+
+// Maneja el cambio de material en el panel de edición (muestra/oculta sub)
+function onEditMaterialChange() {
+  const code = document.getElementById('edit-material').value;
+  const cont = document.getElementById('edit-sub-container');
+  const selSub = document.getElementById('edit-subclasificacion');
+  const mat = ARBOL_MATERIALES[code];
+  if (mat && mat.subs && mat.subs.length > 0) {
+    selSub.innerHTML = '<option value="">— Seleccionar —</option>' +
+      mat.subs.map(s => `<option value="${s}">${s}</option>`).join('');
+    cont.style.display = 'block';
+  } else {
+    cont.style.display = 'none';
+    selSub.innerHTML = '<option value="">— Seleccionar —</option>';
+  }
+}
+
+// Guarda los cambios y registra en auditoría
+async function guardarCambiosFardo() {
+  if (!fardoEnEdicion) return;
+
+  const nuevoMaterial = document.getElementById('edit-material').value;
+  const nuevaSub = document.getElementById('edit-subclasificacion').value || null;
+  const nuevoPeso = parseFloat(document.getElementById('edit-peso').value);
+
+  // Validaciones
+  if (!nuevoMaterial) { alert('Selecciona un material'); return; }
+  const matInfo = ARBOL_MATERIALES[nuevoMaterial];
+  if (matInfo && matInfo.subs && matInfo.subs.length > 0 && !nuevaSub) {
+    alert('Este material requiere subclasificación'); return;
+  }
+  if (isNaN(nuevoPeso) || nuevoPeso <= 0) { alert('Peso inválido'); return; }
+
+  // Pedir clave de administración
+  const clave = prompt('Ingresa la clave de administración para guardar los cambios:');
+  if (clave !== 'metalumrenca') {
+    if (clave) alert('Clave incorrecta');
+    return;
+  }
+
+  // Pedir quién hace el cambio
+  const usuario = prompt('¿Quién hace esta modificación? (nombre para la auditoría)');
+  if (!usuario || !usuario.trim()) { alert('Debes indicar quién hace el cambio'); return; }
+
+  const f = fardoEnEdicion;
+  const anterior = {
+    material_code: f.material_code,
+    subclasificacion: f.subclasificacion || null,
+    peso: f.peso
+  };
+
+  // Detectar qué cambió (para el detalle de la auditoría)
+  const cambios = [];
+  if (anterior.material_code !== nuevoMaterial) cambios.push(['material_code', anterior.material_code, nuevoMaterial]);
+  if ((anterior.subclasificacion || '') !== (nuevaSub || '')) cambios.push(['subclasificacion', anterior.subclasificacion || '(vacío)', nuevaSub || '(vacío)']);
+  if (Number(anterior.peso) !== nuevoPeso) cambios.push(['peso', String(anterior.peso), String(nuevoPeso)]);
+
+  // El folio refleja el material: si cambió el material, actualizar el final del folio
+  let nuevoFolio = f.folio;
+  if (anterior.material_code !== nuevoMaterial) {
+    const partes = f.folio.split('-');
+    if (partes.length >= 3) {
+      nuevoFolio = partes[0] + '-' + partes[1] + '-' + nuevoMaterial;
+      cambios.push(['folio', f.folio, nuevoFolio]);
+    }
+  }
+
+  try {
+    // 1) Actualizar el fardo
+    const update = {
+      material_code: nuevoMaterial,
+      subclasificacion: nuevaSub,
+      peso: nuevoPeso,
+      folio: nuevoFolio
+    };
+    await sb('/rest/v1/pesaje_data?id=eq.' + f.id, {
+      method: 'PATCH',
+      body: JSON.stringify(update)
+    });
+
+    // 2) Registrar en auditoría
+    let registrosAuditoria;
+    if (cambios.length > 0) {
+      registrosAuditoria = cambios.map(([campo, antes, despues]) => ({
+        folio: nuevoFolio,
+        accion: 'modificacion',
+        campo: campo,
+        valor_anterior: antes,
+        valor_nuevo: despues,
+        usuario: usuario.trim(),
+        detalle: 'Modificado desde Admin'
+      }));
+    } else {
+      // Guardó sin cambiar valores: queda constancia de la revisión
+      registrosAuditoria = [{
+        folio: nuevoFolio,
+        accion: 'modificacion',
+        campo: '(sin cambios)',
+        valor_anterior: null,
+        valor_nuevo: null,
+        usuario: usuario.trim(),
+        detalle: 'Guardado desde Admin sin modificar valores (revisión)'
+      }];
+    }
+    await sb('/rest/v1/auditoria', {
+      method: 'POST',
+      body: JSON.stringify(registrosAuditoria)
+    });
+
+    // 3) Si el fardo está despachado, actualizar también la tabla despachos
+    if (f.despachado) {
+      try {
+        await sb('/rest/v1/despachos?folio=eq.' + encodeURIComponent(f.folio), {
+          method: 'PATCH',
+          body: JSON.stringify({
+            folio: nuevoFolio,
+            material_code: nuevoMaterial,
+            subclasificacion: nuevaSub,
+            peso: nuevoPeso
+          })
+        });
+      } catch (e) { /* la tabla despachos puede no tener el folio, no es crítico */ }
+    }
+
+    alert('✓ Cambios guardados y registrados en auditoría.\n\nFolio: ' + nuevoFolio);
+    // Recargar la búsqueda con el folio nuevo
+    document.getElementById('adm-buscar-folio').value = nuevoFolio;
+    buscarFolioAdmin();
+    cargarHistorialAuditoria();
+
+  } catch (e) {
+    alert('Error guardando los cambios: ' + e.message);
+  }
+}
+
+// Reimprime la etiqueta del fardo en edición
+async function reimprimirFardo() {
+  if (!fardoEnEdicion) return;
+  const f = fardoEnEdicion;
+
+  if (!confirm('¿Reimprimir la etiqueta del fardo ' + f.folio + '?')) return;
+
+  try {
+    const r = await fetch(FLASK + '/print_label', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ folio: f.folio, peso: f.peso, material_code: f.material_code })
+    });
+    const result = await r.json();
+
+    if (result.success) {
+      // Registrar la reimpresión en auditoría
+      const usuario = prompt('Etiqueta enviada a impresión.\n\n¿Quién reimprimió? (para la auditoría)') || 'No especificado';
+      await sb('/rest/v1/auditoria', {
+        method: 'POST',
+        body: JSON.stringify([{
+          folio: f.folio,
+          accion: 'reimpresion',
+          campo: null,
+          valor_anterior: null,
+          valor_nuevo: null,
+          usuario: usuario.trim(),
+          detalle: 'Reimpresión de etiqueta desde Admin'
+        }])
+      });
+      alert('✓ Etiqueta reimpresa y registrada.');
+      cargarHistorialAuditoria();
+    } else {
+      alert('No se pudo imprimir: ' + (result.message || 'error desconocido'));
+    }
+  } catch (e) {
+    alert('No hay conexión con la impresora (Flask offline). No se reimprimió.');
+  }
+}
+
+// Carga el historial de auditoría
+async function cargarHistorialAuditoria() {
+  const cont = document.getElementById('adm-historial');
+  if (!cont) return;
+  try {
+    const reg = await sb('/rest/v1/auditoria?order=timestamp.desc&limit=30&select=*');
+    if (!reg.length) {
+      cont.innerHTML = '<div class="empty">Sin cambios registrados aún</div>';
+      return;
+    }
+    cont.innerHTML = reg.map(r => {
+      const fecha = new Date(r.timestamp).toLocaleString('es-CL', {
+        day:'2-digit', month:'2-digit', year:'numeric', hour:'2-digit', minute:'2-digit'
+      });
+      let descripcion;
+      if (r.accion === 'reimpresion') {
+        descripcion = '🖨️ Reimpresión';
+      } else {
+        descripcion = `<strong>${r.campo}</strong>: ${r.valor_anterior} → ${r.valor_nuevo}`;
+      }
+      return `<div style="padding:10px 12px;border-bottom:1px solid #eee;font-size:13px;">
+        <div style="display:flex;justify-content:space-between;">
+          <span><strong>${r.folio}</strong> · ${descripcion}</span>
+          <span style="color:#aaa;font-size:11px;white-space:nowrap;margin-left:10px;">${fecha}</span>
+        </div>
+        <div style="color:#888;font-size:11px;margin-top:2px;">por ${r.usuario || '—'}</div>
+      </div>`;
+    }).join('');
+  } catch (e) {
+    cont.innerHTML = '<div class="empty">Error cargando historial: ' + e.message + '</div>';
+  }
 }
 
 // ---- OPERADORES ----
@@ -1479,11 +1810,18 @@ async function cargarListaMateriales() {
 async function agregarMaterial() {
   const code = document.getElementById('adm-mat-code').value.trim().toUpperCase();
   const nombre = document.getElementById('adm-mat-nombre').value.trim();
+  const sub = document.getElementById('adm-mat-subs').value.trim();
   if (!code || !nombre) { alert('Completa código y nombre del material'); return; }
+
+  // Si hay subcategoría, se combina: nombre "Cobre H", código "CU-H"
+  const codeFinal = sub ? (code + '-' + sub.toUpperCase()) : code;
+  const nombreFinal = sub ? (nombre + ' ' + sub.toUpperCase()) : nombre;
+
   try {
-    await sb('/rest/v1/materiales', { method:'POST', body: JSON.stringify({ code, nombre }) });
+    await sb('/rest/v1/materiales', { method:'POST', body: JSON.stringify({ code: codeFinal, nombre: nombreFinal }) });
     document.getElementById('adm-mat-code').value = '';
     document.getElementById('adm-mat-nombre').value = '';
+    document.getElementById('adm-mat-subs').value = '';
     cargarListaMateriales();
     cargarDropdownsDinamicos();
   } catch (e) { alert('Error agregando material: ' + e.message); }
