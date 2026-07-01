@@ -1700,10 +1700,12 @@ async function reimprimirFardo() {
   if (!confirm('¿Reimprimir la etiqueta del fardo ' + f.folio + '?')) return;
 
   try {
+    // Para la etiqueta se concatena material + subcategoría (ej: TTCO-B), igual que en pesaje.
+    const materialEtiqueta = f.subclasificacion ? (f.material_code + '-' + f.subclasificacion) : f.material_code;
     const r = await fetch(FLASK + '/print_label', {
       method: 'POST',
       headers: {'Content-Type':'application/json'},
-      body: JSON.stringify({ folio: f.folio, peso: f.peso, material_code: f.material_code })
+      body: JSON.stringify({ folio: f.folio, peso: f.peso, material_code: materialEtiqueta })
     });
     const result = await r.json();
 
