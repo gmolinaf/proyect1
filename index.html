@@ -897,12 +897,15 @@ async function procesarImpresionYRegistro() {
   msg('msg-pesaje', '🖨️ Imprimiendo etiqueta... no registra hasta confirmar impresión', 'info');
 
   // ── PASO 1: IMPRIMIR PRIMERO ──
+  // Para la ETIQUETA se concatena material + subcategoría (ej: CCTO-B).
+  // Esto es SOLO para la impresión: la base de datos y el folio no se tocan.
+  const materialEtiqueta = subclasificacion ? (material + '-' + subclasificacion) : material;
   let resultImpresion;
   try {
     const r = await fetch(FLASK + '/print_label', {
       method: 'POST',
       headers: {'Content-Type':'application/json'},
-      body: JSON.stringify({ folio: f, peso, material_code: material })
+      body: JSON.stringify({ folio: f, peso, material_code: materialEtiqueta })
     });
     resultImpresion = await r.json();
   } catch (e) {
